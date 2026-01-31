@@ -1,6 +1,0 @@
-pyproject.toml
-NEUXO.egg-info/PKG-INFO
-NEUXO.egg-info/SOURCES.txt
-NEUXO.egg-info/dependency_links.txt
-NEUXO.egg-info/requires.txt
-NEUXO.egg-info/top_level.txt
