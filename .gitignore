@@ -6,3 +6,4 @@
 .ruff_cache/
 __pycache__/
 users/ # Ignore user, needs to uncomment in the future
+neuxo/users/
