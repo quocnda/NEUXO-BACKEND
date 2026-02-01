@@ -52,6 +52,7 @@ class LinkedinExcludeCompany(models.Model):
         db_table = "DEFAULT_Linkedin_ExcludeCompany"
 
 
+# ---------------------- Company Models ----------------------#
 class LinkedinCompany(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
@@ -124,6 +125,28 @@ class LinkedinCompany(models.Model):
             "page_size": page_size,
             "total_pages": (total + page_size - 1) // page_size,
         }
+
+
+class MasterCompanies(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    company = models.ForeignKey(
+        LinkedinCompany, on_delete=models.CASCADE, blank=True, null=True
+    )
+
+    trigger = models.JSONField(default=list, blank=True, null=True)
+    contact = models.BooleanField(default=False)
+    funding_amount = models.TextField(blank=True, null=True)
+    score = models.FloatField(blank=True, null=True)
+
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+    trigger_time = models.DateTimeField(default=timezone.now)
+
+    lst_email_contact = models.JSONField(default=list, blank=True, null=True)
+    user_reach_out = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = "Companies_Master"
 
 
 # ----------------------------------- Event  -----------------------------------#
