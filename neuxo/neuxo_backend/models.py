@@ -153,7 +153,7 @@ class MainEvents(models.Model):
     updated_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        db_table = "VarIQ_Events_MainEvents"
+        db_table = "Events_MainEvents"
 
 
 class EventsList(models.Model):
@@ -190,7 +190,7 @@ class EventsList(models.Model):
     end_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        db_table = "VarIQ_Events_List"
+        db_table = "Events_List"
 
 
 class GuestList(models.Model):
@@ -224,7 +224,7 @@ class GuestList(models.Model):
     updated_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        db_table = "VarIQ_Events_GuestList"
+        db_table = "Events_GuestList"
         indexes = [
             models.Index(fields=["created_at"]),
             models.Index(fields=["company"]),
