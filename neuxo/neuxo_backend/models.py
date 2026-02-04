@@ -2,6 +2,8 @@ from django.db import models  # noqa: F401
 import uuid
 from django.utils import timezone
 
+from users.models import Users
+
 
 # ----------------------------------- Main Functions -----------------------------------#
 
@@ -84,6 +86,11 @@ class LinkedinCompany(models.Model):
         max_length=255, blank=True, null=True, default=""
     )
 
+    # Add missing fields referenced in indexes
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    assignee = models.CharField(max_length=255, blank=True, null=True)
+
     class Meta:
         db_table = "Linkedin_Companies"
         indexes = [
@@ -147,6 +154,18 @@ class MasterCompanies(models.Model):
 
     class Meta:
         db_table = "Companies_Master"
+
+
+class ShowingField(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name_columns = models.CharField(max_length=100)
+    is_show = models.TextField(blank=True, null=True)
+    can_arrange = models.TextField(default="NO", blank=True, null=True)
+    order_by = models.IntegerField(default=0, null=True, blank=True)
+    user = models.ForeignKey(Users, on_delete=models.CASCADE, blank=True, null=True)
+
+    class Meta:
+        db_table = "User_Dashboard_ShowingField"
 
 
 # ----------------------------------- Event  -----------------------------------#
