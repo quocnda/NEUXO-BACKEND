@@ -11,7 +11,11 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+from urllib.parse import quote
+from dotenv import load_dotenv
 
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -19,6 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
+SCHEMA_URL = "/api/docs/schema/"
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-t$+9h!zwnw!=0gxd6s35fk643&@wb5@n91xpv+ll%tx!+d8hrt"
 
@@ -39,6 +44,11 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "neuxo_backend",
     "users",
+    "rest_framework",
+    "corsheaders",
+    "drf_spectacular",
+    "django_crontab",
+    "channels",
 ]
 
 MIDDLEWARE = [
@@ -69,15 +79,24 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "neuxo.wsgi.application"
-
+ASGI_APPLICATION = "neuxo.asgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": os.getenv("DB_ENGINE"),
+        "NAME": os.getenv("DB_NAME"),
+        "HOST": os.getenv("DB_HOST"),
+        "PORT": os.getenv("DB_PORT"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "OPTIONS": {
+            "charset": "utf8mb4",
+            "connect_timeout": 5,
+            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
     }
 }
 
@@ -121,4 +140,179 @@ STATIC_URL = "static/"
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
+STATIC_ROOT = os.path.join(
+    BASE_DIR, "staticfiles"
+)  # Changed to 'staticfiles' to avoid conflict
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, "static"),
+]
+if not os.path.exists(os.path.join(BASE_DIR, "static")):
+    os.makedirs(os.path.join(BASE_DIR, "static"))
+# Default primary key field type
+# https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+REST_FRAMEWORK = {
+    # other DRF settings here
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework.authentication.TokenAuthentication",
+        "rest_framework.authentication.BasicAuthentication",
+    ),
+}
+
+SPECTACULAR_SETTINGS = {
+    "DESCRIPTION": """This is a SaleIQ docs api. You can find more about the API at [SaleIQ API]().""",
+    "TITLE": "SALE-IQ API",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SERVE_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication"
+    ],
+    "CONTACT": {"name": "Phong Nguyen", "email": "", "url": ""},
+    "LICENSE": {"name": "MIT", "url": "https://opensource.org/licenses/MIT"},
+    "TAGS": [
+        {
+            "name": "Authentication",
+            "description": "RCVR user Basic Authentication to get access token and refresh token when call Sign-in API then use access token to call other APIs",
+        },
+        {"name": "User", "description": "User operations"},
+    ],
+    # Adding server configuration for Nginx proxying
+    "SERVERS": [
+        {"url": "/", "description": "API Local"},
+        {"url": "/api", "description": "API Server"},
+    ],
+    # Schema handler configuration
+    "SCHEMA_PATH_PREFIX": "/api",
+    "SCHEMA_PATH_PREFIX_INSERT": False,
+    "APPEND_COMPONENTS": {},
+}
+
+
+SWAGGER_SETTINGS = {
+    "SECURITY_DEFINITIONS": {
+        "api_key": {"type": "apiKey", "in": "header", "name": "Authorization"}
+    },
+    "DOC_EXPANSION": None,
+    "APIS_SORTER": None,
+    "OPERATIONS_SORTER": None,
+    "JSON_EDITOR": False,
+    "SHOW_REQUEST_HEADERS": False,
+    "SUPPORTED_SUBMIT_METHODS": ["get", "post", "put", "delete", "patch"],
+    "VALIDATOR_URL": "",
+}
+
+REDOC_SETTINGS = {
+    "LAZY_RENDERING": False,
+    "HIDE_HOSTNAME": False,
+    "EXPAND_RESPONSES": "all",
+    "PATH_IN_MIDDLE_PANEL": False,
+    "SCROLL_Y_OFFSET": 50,
+    "SCROLL_X_OFFSET": 50,
+    "SHOW_EXTENSIONS": False,
+    "SHOW_COMMON_EXTENSIONS": False,
+    "EXTENSIONS": [],
+    "REQUIRED_PROPS_FIRST": False,
+    "SORT_PROPS_ALPHABETICALLY": False,
+    "NO_AUTO_AUTH": False,
+    "HIDE_DOWNLOAD_BUTTON": False,
+    "HIDE_TOC": False,
+    "HIDE_NAVIGATION_BAR": False,
+    "NAVIGATION_BAR_BACKGROUND": "#ffffff",
+    "NAVIGATION_BAR_COLOR": "#000000",
+    "FOOTER": "",
+    "FOOTER_MODE": "sticky",
+    "DISABLE_SEARCH": False,
+    "DISABLE_FILTER": False,
+    "DISABLE_SORT": False,
+    "THEME": "dark",
+    "EXPAND_DEFAULT_SERVER_VARIABLES": False,
+    "RESPONSES_TRAY": False,
+}
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://"
+        + os.getenv("REDIS_HOST")
+        + ":"
+        + os.getenv("REDIS_PORT")
+        + "/"
+        + os.getenv("REDIS_DB"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "PASSWORD": os.getenv("REDIS_PASSWORD"),
+        },
+    }
+}
+
+# LOGGING = {
+#     "version": 1,
+#     "disable_existing_loggers": False,
+#     "handlers": {
+#         "console": {
+#             "class": "logging.StreamHandler",
+#         },
+#     },
+#     "root": {
+#         "handlers": ["console"],
+#         "level": "CRITICAL",
+#     },
+#     "loggers": {
+#         "email_sender": {
+#             "handlers": ["console"],
+#             "level": "INFO",
+#             "propagate": False,
+#         },
+#     },
+# }
+
+# Use this setting locally if your redis does not require password
+# CHANNEL_LAYERS = {
+#     'default': {
+#         "BACKEND": "channels_redis.core.RedisChannelLayer",
+#         "CONFIG": {
+#             "hosts": [(
+#                 os.getenv("REDIS_HOST", "127.0.0.1"),
+#                 int(os.getenv("REDIS_PORT", 6379))
+#             )],
+#         },
+#     },
+# }
+
+# # Use this setting if your redis requires password
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [
+                f"redis://:{quote(os.getenv('REDIS_PASSWORD'))}@{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PORT')}/0"
+            ],
+        },
+    },
+}
+
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'handlers': {
+#         'console': {
+#             'class': 'logging.StreamHandler',
+#         },
+#     },
+#     'loggers': {
+#         'django': {
+#             'handlers': ['console'],
+#             'level': 'DEBUG',
+#         },
+#         'channels': {
+#             'handlers': ['console'],
+#             'level': 'DEBUG',
+#             'propagate': True,
+#         },
+#     },
+# }

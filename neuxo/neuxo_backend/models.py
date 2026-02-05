@@ -272,3 +272,32 @@ class GuestList(models.Model):
             models.Index(fields=["company"]),
             models.Index(fields=["email_status_emailinfor"]),
         ]
+
+
+class Document(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    file_name = models.CharField(max_length=255)
+    path_file = models.TextField(blank=False, null=False)
+    size = models.IntegerField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "Documents"
+
+
+class MailAppAccount(models.Model):
+    STATUS_CHOICES = [
+        ("ACTIVE", "ACTIVE"),
+        ("INACTIVE", "INACTIVE"),
+    ]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(Users, on_delete=models.CASCADE, blank=True, null=False)
+    email = models.TextField(max_length=300, blank=True, null=True)
+    password_app = models.TextField(max_length=300, blank=True, null=True)
+    status = models.CharField(default="ACTIVE", choices=STATUS_CHOICES, max_length=100)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "User_Mail_Account"
