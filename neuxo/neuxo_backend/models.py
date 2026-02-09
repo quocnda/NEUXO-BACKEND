@@ -78,10 +78,13 @@ class LinkedinCompany(models.Model):
     category = models.CharField(max_length=100, blank=True, null=True)
 
     note = models.TextField(blank=True, null=True)
+    note_of_user = models.TextField(blank=True, null=True)
     is_finding_company = models.CharField(max_length=200, blank=True, null=True)
     is_crawl = models.CharField(max_length=50, blank=True, null=True)
     is_blacklist = models.BooleanField(default=False, null=True)
 
+    lst_email_contact = models.JSONField(default=list, blank=True, null=True)
+    user_reach_out = models.TextField(blank=True, null=True)
     organization_revune_apollo = models.CharField(
         max_length=255, blank=True, null=True, default=""
     )

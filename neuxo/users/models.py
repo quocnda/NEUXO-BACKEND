@@ -19,9 +19,6 @@ class Users(models.Model):
     phone_number = models.CharField(max_length=64, null=True)
     pwd_sha256 = models.CharField(max_length=64, null=True)
     email = models.CharField(max_length=128, null=True)
-    avatar = models.ForeignKey(
-        "neuxo_backend.Document", on_delete=models.CASCADE, blank=True, null=True
-    )
     account_status = models.CharField(
         max_length=128, null=False, default="NEW", choices=ACCOUNT_STATUS
     )

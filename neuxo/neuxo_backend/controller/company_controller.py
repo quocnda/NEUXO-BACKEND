@@ -12,16 +12,13 @@ from django.db.models import Q
 def getDataCompany(request):
     search_key = request.GET.get("search_key", None)
     companies = MasterCompanies.objects.all().order_by(("-company__created_at"))
+    print("Total LEN COMPANIES:", companies.count())
     companies = (
-        companies.filter(
-            company__is_finding_company__isnull=True,
-            company__is_blacklist=False,
-        )
-        .exclude(company__industry__in=INDUSTRIES_REJECT)
+        companies.exclude(company__industry__in=INDUSTRIES_REJECT)
         .exclude(company__country="Vietnam")
-        .select_related("company", "company__assignee")
+        .select_related("company")
     )
-
+    print("Initial LEN COMPANIES:", companies.count())
     if search_key:
         companies = companies.filter(Q(company__name__icontains=search_key))
     count_trigger = request.GET.get("count_trigger", None)
@@ -33,7 +30,7 @@ def getDataCompany(request):
 
     if start_date and end_date:
         companies = companies.filter(updated_at__range=[start_date, end_date])
-
+    print("LEN COMPANIES:", companies.count())
     lst_data = []
     sort_field_map = {
         "company": "company__name",
@@ -70,7 +67,6 @@ def getDataCompany(request):
         "company__note_of_user",
         "company__short_description",
         # "company__is_crawl",
-        "company__assignee__name",
         "company__avatar_url",
         # "company__updated_at",
         "company__lst_email_contact",
@@ -120,7 +116,6 @@ def getDataCompany(request):
             "note": company["company__note_of_user"],
             "avatar_url": company["company__avatar_url"],
             "short_description": company["company__short_description"],
-            "assignee": company["company__assignee__name"],
             "lst_email": company["company__lst_email_contact"]
             if company["company__lst_email_contact"]
             else [],

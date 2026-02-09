@@ -66,10 +66,11 @@ REFRESH_TOKEN_TTL_MINUTES = int(os.getenv("REFRESH_TOKEN_TTL_MINUTES"))
 def signIn(request):
     if request.method == "POST":
         try:
+            print("Ready for sign in")
             serializer = SignInSerializer(data=request.data)
             if not serializer.is_valid():
                 return JsonResponse(serializer.errors, status=HTTP_400_BAD_REQUEST)
-
+            print("Serializer is valid")
             username = serializer.validated_data.get("username")
             password = serializer.validated_data.get("password")
 
@@ -92,17 +93,6 @@ def signIn(request):
                 return JsonResponse(
                     {"message": "User Name or password is incorrect"},
                     status=HTTP_400_BAD_REQUEST,
-                )
-
-            if myUser.account_status == "NEW":
-                return JsonResponse(
-                    {"message": "Please verify your account by email"},
-                    status=HTTP_401_UNAUTHORIZED,
-                )
-
-            if myUser.account_status != "VERIFIED":
-                return JsonResponse(
-                    {"message": "Account is not verified"}, status=HTTP_401_UNAUTHORIZED
                 )
 
             permissions = None
@@ -130,6 +120,9 @@ def signIn(request):
             }
             return JsonResponse(data, status=HTTP_200_OK)
         except Exception:
+            import traceback
+
+            traceback.print_exc()
             return JsonResponse(
                 {"message": "Sign-in unsuccessfully."}, status=HTTP_400_BAD_REQUEST
             )
@@ -850,6 +843,9 @@ def signUpGoogle(request):
 
         except Exception as e:
             print(e)
+            import traceback
+
+            traceback.print_exc()
             return JsonResponse(
                 {"message": "Sign-up unsuccessfully."}, status=HTTP_400_BAD_REQUEST
             )
@@ -1056,6 +1052,7 @@ def signInGoogle(request):
                 "email": {
                     "type": "string",
                 },
+                "username": {"type": "string"},
                 "password": {
                     "type": "string",
                 },
@@ -1075,6 +1072,7 @@ def signUp(request):
     if request.method == "POST":
         try:
             email = request.data.get("email")
+            username = request.data.get("username", None)
             password = request.data.get("password")
 
             if not password or not email:
@@ -1098,6 +1096,7 @@ def signUp(request):
             pwd_sha256 = encodeToSha256(password)
             with transaction.atomic():
                 newUser = Users.objects.create(
+                    username=username if username else email.split("@")[0],
                     email=email,
                     pwd_sha256=pwd_sha256,
                     role="User",
@@ -1110,6 +1109,9 @@ def signUp(request):
 
             return JsonResponse({"message": "Sign-up successfully"}, status=HTTP_200_OK)
         except Exception:
+            import traceback
+
+            traceback.print_exc()
             return JsonResponse(
                 {"message": "Sign-up unsuccessfully."}, status=HTTP_400_BAD_REQUEST
             )
