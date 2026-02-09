@@ -22,25 +22,37 @@ from django.conf.urls.static import static
 from django.conf import settings
 from drf_spectacular.views import (
     SpectacularAPIView,
+    SpectacularRedocView,
     SpectacularSwaggerView,
 )
+from rest_framework.authentication import TokenAuthentication
 
 
-SCHEMA_URL = getattr(settings, "SCHEMA_URL", None)
+DOCS_PREFIX = "api/docs/"
+SCHEMA_URL = getattr(settings, "SCHEMA_URL", f"/{DOCS_PREFIX}schema/")
 urlpatterns = [
-    path("docs/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(f"{DOCS_PREFIX}schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
-        "docs/swagger/",
+        f"{DOCS_PREFIX}swagger/",
         SpectacularSwaggerView.as_view(url_name="schema", url=SCHEMA_URL),
         name="swagger",
     ),
     path(
-        "docs/swagger-local/",
+        f"{DOCS_PREFIX}swagger-local/",
         SpectacularSwaggerView.as_view(url_name="schema"),
         name="swagger-local",
     ),
+    path(
+        f"{DOCS_PREFIX}redoc/",
+        SpectacularRedocView.as_view(
+            url_name="schema",
+            url=SCHEMA_URL,
+            authentication_classes=(TokenAuthentication,),
+        ),
+        name="redoc",
+    ),
     path("admin/", admin.site.urls),
-    path("user/", include("users.urls")),
+    path("users/", include("users.urls")),
     path("data/", include("neuxo_backend.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

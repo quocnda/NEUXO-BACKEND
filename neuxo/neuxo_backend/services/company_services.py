@@ -9,6 +9,7 @@ from rest_framework.status import (
     HTTP_405_METHOD_NOT_ALLOWED,
 )
 from neuxo_backend.controller.company_controller import getDataCompany
+from users.utils.utils import requireLogin
 from neuxo_backend.services import PARAMETERS
 
 
@@ -61,11 +62,14 @@ from neuxo_backend.services import PARAMETERS
 )
 @csrf_exempt
 @api_view(["GET"])
+@requireLogin
 def getMatchingCompany(request: HttpRequest) -> JsonResponse:
     if request.method != "GET":
         return JsonResponse(
             {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
         )
+
+    print("Ready for geting data")
     paginator, output_data, showing_columns = getDataCompany(request)
     return JsonResponse(
         {
