@@ -137,6 +137,43 @@ class LinkedinCompany(models.Model):
         }
 
 
+class LinkedinJob(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=1000)
+    category = models.ForeignKey(
+        LinkedinCategory, on_delete=models.CASCADE, blank=True, null=True
+    )
+    location = models.ForeignKey(
+        LinkedinLocation, on_delete=models.CASCADE, blank=True, null=True
+    )
+    company = models.ForeignKey(
+        LinkedinCompany, on_delete=models.CASCADE, blank=True, null=True
+    )
+    linkedin_url = models.URLField(max_length=200, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    label = models.ForeignKey(
+        LinkedinJobLabels, on_delete=models.CASCADE, blank=True, null=True
+    )
+    short_description = models.TextField(blank=True, null=True)
+
+    note = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    status = models.TextField(blank=True, null=True, default="active")
+    last_check = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "Linkedin_Jobs"
+        indexes = [
+            models.Index(fields=["created_at"], name="job_created_at_idx"),
+            models.Index(
+                fields=["company", "last_check"], name="job_company_lastcheck_idx"
+            ),
+            models.Index(fields=["linkedin_url"], name="job_linkedin_url_idx"),
+        ]
+
+
 class MasterCompanies(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     company = models.ForeignKey(
@@ -304,3 +341,62 @@ class MailAppAccount(models.Model):
 
     class Meta:
         db_table = "User_Mail_Account"
+
+
+class Notification(models.Model):
+    TYPE_CHOICES = [
+        ("SUB_DOMAIN", "SUB_DOMAIN"),
+        ("LINKEDIN", "LINKEDIN"),
+        ("TWITTER", "TWITTER"),
+        ("EVENT", "EVENT"),
+        ("HIRING", "HIRING"),
+        ("NEWS", "NEWS"),
+        ("FUNDING", "FUNDING"),
+        ("JOB_CHANGE", "JOB_CHANGE"),
+    ]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    type = models.TextField(blank=True, null=False, choices=TYPE_CHOICES)
+    reference_id = models.TextField(blank=True, null=False)
+    title = models.TextField(blank=True, null=True)
+    post_url = models.TextField(blank=True, null=True)
+    time_post = models.DateTimeField(default=timezone.now)
+    company = models.ForeignKey(
+        LinkedinCompany, on_delete=models.CASCADE, blank=True, null=True
+    )
+    guest_id = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+    is_send = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "Notification"
+
+
+# --------------------------------Funding ---------------------------------------
+class CompanyFunding(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    round = models.CharField(max_length=100, blank=True, null=True)
+    date = models.DateTimeField(default=timezone.now)
+    amount = models.CharField(max_length=100, blank=True, null=True)
+    category = models.CharField(max_length=500, blank=True, null=True)
+
+    website = models.URLField(max_length=200, blank=True, null=True)
+    project_url = models.URLField(max_length=200, blank=True, null=True)
+    linkedin_url = models.URLField(max_length=200, blank=True, null=True)
+    linkedin_uid = models.CharField(max_length=100, blank=True, null=True)
+
+    company = models.ForeignKey(
+        LinkedinCompany, on_delete=models.CASCADE, blank=True, null=True
+    )
+    logo_url = models.URLField(max_length=200, blank=True, null=True)
+
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "Funding"
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["updated_at"]),
+        ]
