@@ -61,7 +61,7 @@ class LinkedinCompany(models.Model):
     avatar_url = models.URLField(max_length=1000, blank=True, null=True)
     linkedin_url = models.URLField(max_length=500, blank=True, null=True)
     linkedin_uid = models.CharField(max_length=100, blank=True, null=True)
-    website = models.URLField(max_length=200, blank=True, null=True)
+    website = models.URLField(max_length=1000, blank=True, null=True)
     size = models.CharField(max_length=50, blank=True, null=True)
     link_twitter = models.CharField(max_length=100, blank=True, null=True)
 
@@ -400,3 +400,94 @@ class CompanyFunding(models.Model):
             models.Index(fields=["name"]),
             models.Index(fields=["updated_at"]),
         ]
+
+
+# -----------------Clutch io-----------------
+
+
+class ClutchReview(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    company = models.ForeignKey(
+        LinkedinCompany, on_delete=models.CASCADE, blank=True, null=True
+    )
+    reviewer_name = models.CharField(max_length=255, blank=True, null=True)
+    reviewer_role = models.CharField(max_length=255, blank=True, null=True)
+    reviewer_company = models.CharField(max_length=255, blank=True, null=True)
+    industry = models.CharField(max_length=255, blank=True, null=True)
+    location = models.CharField(max_length=255, blank=True, null=True)
+    client_size = models.CharField(max_length=255, blank=True, null=True)
+    services = models.CharField(max_length=255, blank=True, null=True)
+    project_size = models.CharField(max_length=255, blank=True, null=True)
+    project_length = models.CharField(max_length=255, blank=True, null=True)
+    project_description = models.TextField(blank=True, null=True)
+    background = models.TextField(blank=True, null=True)
+    website_url = models.URLField(max_length=1000, blank=True, null=True)
+    linkedin_url = models.URLField(max_length=200, blank=True, null=True)
+    description_company_outsource = models.TextField(blank=True, null=True)
+    services_company_outsource = models.CharField(max_length=255, blank=True, null=True)
+
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "Clutch_Review"
+        indexes = [
+            models.Index(fields=["company"]),
+            models.Index(fields=["updated_at"]),
+        ]
+
+
+# -----------------People ------------------
+class LinkedinPersonalEmail(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField(max_length=100)
+    first_name = models.CharField(max_length=100, blank=True, null=True)
+    last_name = models.CharField(max_length=100, blank=True, null=True)
+    linkedin_url = models.URLField(max_length=200, blank=True, null=True)
+    twitter_url = models.URLField(max_length=200, blank=True, null=True)
+    avatar_linkedin_url = models.TextField(blank=True, null=True)
+    role = models.CharField(max_length=200, blank=True, null=True)
+    company = models.ForeignKey(
+        LinkedinCompany, on_delete=models.CASCADE, blank=True, null=True
+    )
+    twitter_summary = models.TextField(blank=True, null=True)
+
+    note = models.TextField(blank=True, null=True)
+    is_update = models.IntegerField(default=0)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+    urn = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = "Linkedin_Peoples"
+
+
+class PersonalExperience(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    linkedin_company_id = models.TextField(blank=True, null=True, max_length=50)
+    linkedin_company_url = models.TextField(blank=True, null=True)
+    linkedin_company_logo = models.TextField(blank=True, null=True)
+    title = models.TextField(blank=True, null=True)
+    company_name = models.TextField(blank=True, null=True)
+    time_period = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+    personal = models.ForeignKey(
+        LinkedinPersonalEmail, on_delete=models.CASCADE, blank=False, null=False
+    )
+
+    class Meta:
+        db_table = "Linkedin_Personal_Experience"
+
+
+class PersonalEmail(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField(max_length=100, unique=False)
+    personal = models.ForeignKey(
+        LinkedinPersonalEmail, on_delete=models.CASCADE, blank=False, null=False
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "Personal_Email"
