@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Literal
+
 from neuxo_backend.models import ShowingField
 from neuxo_backend.controller import COMPANY_SIZE_ORDER
 from functools import reduce
@@ -206,3 +210,158 @@ def getFilterDataQuery(request=None, companies=None, table=None, sort_field_map=
                 )
 
     return companies
+
+
+def getShowingColumnsCustom(
+    source: Literal["Event", "Guests", "Job", "Funding", "Blacklist"],
+    request,
+):
+    user_info = request.user
+    userId = user_info.get("id", None)
+
+    if source is None:
+        return False
+
+    name_order_map = {
+        "Event": [
+            "name",
+            "event_url",
+            "start_date",
+            "companies",
+            "guests",
+            "event_parent",
+            "location",
+            "country",
+        ],
+        "Guests": [
+            "name",
+            "link",
+            "event__name",
+            "company__name",
+            "company__country",
+            "category",
+            "email",
+            "created_at",
+        ],
+        "Job": [
+            "job_title",
+            "category",
+            "company",
+            "location",
+            "linkedin_url",
+            "created_at",
+            "label",
+        ],
+        "Funding": [
+            "name",
+            "link",
+            "round",
+            "funding_amount",
+            "date",
+            "category",
+            "created_at",
+        ],
+        "Blacklist": [
+            "name",
+            "link",
+            "industry",
+            "headquarters",
+            "category",
+            "labels",
+            "size",
+            "organization_type",
+            "short_description",
+            "note_of_user",
+            "created_at",
+            "trigger_time",
+        ],
+    }
+
+    name_order = name_order_map.get(source)
+    if name_order is None:
+        return False
+
+    if userId is None:
+        is_showing_columns = ShowingField.objects.filter(user_id=None).values()
+    else:
+        is_showing_columns = ShowingField.objects.filter(user_id=userId).values()
+
+    showing_columns = []
+    for column in is_showing_columns:
+        if column["name_columns"] not in name_order:
+            continue
+        dict_col_value = {
+            "name": column["name_columns"],
+            "is_show": True,
+            "can_arrange": column["can_arrange"] == "YES",
+        }
+        showing_columns.append(dict_col_value)
+
+    order_index = {key: idx for idx, key in enumerate(name_order)}
+    return sorted(
+        showing_columns, key=lambda d: order_index.get(d["name"], float("inf"))
+    )
+
+
+def getFilterDataQueryForBlacklist(request, queryset, sort_field_map=None):
+    """
+    Apply sort + filter for queries directly on LinkedinCompany (e.g. Blacklist).
+    Unlike getFilterDataQuery which assumes MasterCompanies with company__ prefix,
+    this function filters on direct LinkedinCompany fields.
+    """
+    sortByVal = request.GET.get("sortByVal", None)
+    orderByVal = request.GET.get("orderByVal", "DESC")
+    country = request.GET.get("country", None)
+    company_size = request.GET.get("company_size", None)
+    followers = request.GET.get("followers", None)
+    industry = request.GET.get("industry", None)
+    organization = request.GET.get("organization_type", None)
+    category = request.GET.get("category", None)
+
+    if not sortByVal:
+        sortByVal = "created_at"
+
+    if sort_field_map:
+        sort_field = sort_field_map.get(sortByVal, "created_at")
+    else:
+        sort_field = sortByVal
+
+    revert = orderByVal.upper() == "DESC"
+
+    if sort_field == "size":
+        queryset = apply_custom_sort(
+            queryset, "size", COMPANY_SIZE_ORDER, sort_desc=revert
+        )
+    else:
+        queryset = queryset.order_by(f"-{sort_field}" if revert else sort_field)
+
+    if country:
+        queryset = queryset.filter(country__in=country.split(","))
+
+    if company_size:
+        queryset = queryset.filter(size__in=company_size.split(","))
+
+    if industry:
+        queryset = queryset.filter(industry__in=industry.split(","))
+
+    if organization:
+        queryset = queryset.filter(organization_type__in=organization.split(","))
+
+    if category:
+        queryset = queryset.filter(category__in=category.split(","))
+
+    if followers:
+        lst_followers = followers.split(",")
+        follower_conditions = []
+        for follower in lst_followers:
+            if follower == "1000001+":
+                follower_conditions.append(Q(followers__gte=1000001))
+            else:
+                follower_range = list(map(int, follower.split("-")))
+                follower_conditions.append(
+                    Q(followers__gte=follower_range[0])
+                    & Q(followers__lte=follower_range[1])
+                )
+        queryset = queryset.filter(reduce(operator.or_, follower_conditions))
+
+    return queryset

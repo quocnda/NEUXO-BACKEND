@@ -1,16 +1,25 @@
 from __future__ import annotations
 
-from django.http import HttpRequest, JsonResponse
+from django.http import HttpRequest, JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.decorators import api_view
 from rest_framework.status import (
     HTTP_200_OK,
     HTTP_405_METHOD_NOT_ALLOWED,
+    HTTP_400_BAD_REQUEST,
 )
-from neuxo_backend.controller.company_controller import getDataCompany
+from neuxo_backend.controller.company_controller import (
+    getDataCompany,
+    updateShowingColumnsData,
+)
 from users.utils.utils import requireLogin
 from neuxo_backend.services import PARAMETERS
+from neuxo_backend.controller.utils import getShowingColumns, getShowingColumnsCustom
+from neuxo_backend.models import LinkedinCompany
+from io import BytesIO
+
+import pandas as pd
 
 
 @extend_schema(
@@ -79,4 +88,183 @@ def getMatchingCompany(request: HttpRequest) -> JsonResponse:
             "data": list(output_data),
         },
         status=HTTP_200_OK,
+    )
+
+
+# ---------------------------------------- listCountryCompany ---------------------------------------- #
+
+
+@extend_schema(
+    parameters=[],
+    responses={"200": "Success"},
+    auth=None,
+    operation_id="GET_listCountryCompany",
+    tags=["Matching"],
+    operation=None,
+)
+@csrf_exempt
+@api_view(["GET"])
+@requireLogin
+def listCountryCompany(request: HttpRequest) -> JsonResponse:
+    if request.method != "GET":
+        return JsonResponse(
+            {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
+        )
+
+    list_country = (
+        LinkedinCompany.objects.filter(country__isnull=False, country__gt="")
+        .exclude(country="Vietnam")
+        .values_list("country", flat=True)
+        .distinct()
+        .order_by("country")
+    )
+    industry = (
+        LinkedinCompany.objects.filter(industry__isnull=False)
+        .exclude(country="Vietnam")
+        .values_list("industry", flat=True)
+        .distinct()
+        .order_by("industry")
+    )
+    organization_type = (
+        LinkedinCompany.objects.filter(organization_type__isnull=False)
+        .exclude(country="Vietnam")
+        .values_list("organization_type", flat=True)
+        .distinct()
+        .order_by("organization_type")
+    )
+
+    return JsonResponse(
+        {
+            "message": "Success",
+            "data": {
+                "list_country": list(list_country),
+                "industry": list(industry),
+                "organization_type": list(organization_type),
+                "trigger": ["event", "funding", "news", "hiring"],
+            },
+        },
+        status=HTTP_200_OK,
+    )
+
+
+# ---------------------------------------- updateShowingColumns ---------------------------------------- #
+
+
+@extend_schema(
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "name_columns": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "is_show": {"type": "boolean"},
+                            "can_arrange": {"type": "boolean"},
+                        },
+                    },
+                }
+            },
+            "required": ["name_columns"],
+        }
+    },
+    responses=None,
+    auth=None,
+    operation_id="PUT_updateShowingColumns",
+    tags=["Matching"],
+    operation=None,
+)
+@csrf_exempt
+@api_view(["PUT"])
+@requireLogin
+def updateShowingColumns(request: HttpRequest) -> JsonResponse:
+    if request.method != "PUT":
+        return JsonResponse(
+            {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
+        )
+    data = request.data
+    name_columns_and_status = data.get("name_columns", [])
+    userId = request.user.get("id", None)
+
+    if not name_columns_and_status:
+        return JsonResponse({"message": "Data is empty"}, status=HTTP_400_BAD_REQUEST)
+
+    showing_columns = updateShowingColumnsData(userId, name_columns_and_status)
+    return JsonResponse(
+        {"message": "Success", "data": {"columns": showing_columns}},
+        status=HTTP_200_OK,
+    )
+
+
+# ---------------------------------------- downloadMatchingCompany ---------------------------------------- #
+
+
+@csrf_exempt
+@api_view(["GET"])
+@requireLogin
+def downloadMatchingCompany(request: HttpRequest) -> HttpResponse:
+    if request.method != "GET":
+        return JsonResponse(
+            {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
+        )
+    _, output_data, _ = getDataCompany(request)
+    response_data = pd.DataFrame(list(output_data))
+
+    response_data["company_size"] = response_data["company_size"].apply(
+        lambda x: f"'{x}" if x else x
+    )
+    response_data["linkedin"] = response_data["external"].apply(
+        lambda x: x.get("linkedin") if isinstance(x, dict) else None
+    )
+    response_data["website"] = response_data["external"].apply(
+        lambda x: x.get("website") if isinstance(x, dict) else None
+    )
+    response_data["twitter"] = response_data["external"].apply(
+        lambda x: x.get("twitter") if isinstance(x, dict) else None
+    )
+    response_data = response_data.drop(columns=["external"])
+
+    excel_file = BytesIO()
+    response_data.to_excel(excel_file, index=False, engine="openpyxl")
+    excel_file.seek(0)
+
+    response = HttpResponse(
+        excel_file,
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = 'attachment; filename="matching_companies.xlsx"'
+    return response
+
+
+# ---------------------------------------- getColumnField ---------------------------------------- #
+
+
+@extend_schema(
+    parameters=[
+        OpenApiParameter(name="table", description="table", required=False, type=str)
+    ],
+    responses={"200": "Success"},
+    auth=None,
+    operation_id="GET_columnField",
+    tags=["Matching"],
+    operation=None,
+)
+@csrf_exempt
+@api_view(["GET"])
+@requireLogin
+def getColumnField(request: HttpRequest) -> JsonResponse:
+    if request.method != "GET":
+        return JsonResponse(
+            {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
+        )
+    table = request.GET.get("table", None)
+    if table:
+        showing_columns = getShowingColumnsCustom(table, request)
+    else:
+        showing_columns = getShowingColumns(request.user.get("id", None))
+
+    return JsonResponse(
+        {"message": "Success", "columns": showing_columns}, status=HTTP_200_OK
     )
