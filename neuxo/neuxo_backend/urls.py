@@ -1,12 +1,119 @@
 from django.urls import path  # noqa: F401
 
-from neuxo_backend.services import company_services
+from neuxo_backend.services import (
+    company_services,
+    blacklist_services,
+    company_details_services,
+)
 
 # ----------------------------- Main Functions -----------------------------------#
 urlpatterns = [
+    # Matching Companies
     path(
-        "matching/companies",
+        "matching-companies/list/",
         company_services.getMatchingCompany,
         name="get_matching_companies",
+    ),
+    path(
+        "matching-companies/listCountryCompany/",
+        company_services.listCountryCompany,
+        name="list_country_company",
+    ),
+    path(
+        "matching-companies/updateShowingColumns/",
+        company_services.updateShowingColumns,
+        name="update_showing_columns",
+    ),
+    path(
+        "matching-companies/downloadMasterCompany/",
+        company_services.downloadMatchingCompany,
+        name="download_master_company",
+    ),
+    path(
+        "companies/field-column/",
+        company_services.getColumnField,
+        name="get_column_field",
+    ),
+    # Blacklist
+    path(
+        "matching-companies/addBlackList/",
+        blacklist_services.addBlackList,
+        name="add_blacklist",
+    ),
+    path(
+        "matching-companies/getBlacklist/",
+        blacklist_services.getBlacklist,
+        name="get_blacklist",
+    ),
+    path(
+        "matching-companies/removeBlacklist/",
+        blacklist_services.removeBlacklist,
+        name="remove_blacklist",
+    ),
+    # Company Details
+    path(
+        "companies/<str:id>/",
+        company_details_services.getCompanyById,
+        name="get_company_by_id",
+    ),
+    path(
+        "companies/addTwitter/<str:id>/",
+        company_details_services.addTwitterForCompany,
+        name="add_twitter_for_company",
+    ),
+    path(
+        "companies/<str:id>/contact/",
+        company_details_services.getListContactByCompanyID,
+        name="get_list_contact_by_company_id",
+    ),
+    path(
+        "companies/<str:id>/addContact/",
+        company_details_services.addContactForCompany,
+        name="add_contact_for_company",
+    ),
+    path(
+        "companies/delete-contact/<str:id>/",
+        company_details_services.deleteContactCompany,
+        name="delete_contact_company",
+    ),
+    path(
+        "companies/contact/<str:id>/addEmail/",
+        company_details_services.addEmailForContact,
+        name="add_email_for_contact",
+    ),
+    path(
+        "companies/contact/removeEmail/<str:id>/",
+        company_details_services.removeEmailForContact,
+        name="remove_email_for_contact",
+    ),
+    path(
+        "companies/contact/<str:contact_id>/updateEmail/<str:id>/",
+        company_details_services.updateEmailForContact,
+        name="update_email_for_contact",
+    ),
+    path(
+        "getEventsByCompanyID/<str:id>/",
+        company_details_services.getEventsByCompanyID,
+        name="get_events_by_company_id",
+    ),
+    path(
+        "getJobsByCompanyID/<str:id>/",
+        company_details_services.getJobsByCompanyID,
+        name="get_jobs_by_company_id",
+    ),
+    path(
+        "getContactsByCompanyID/<str:id>/",
+        company_details_services.getContactsByCompanyID,
+        name="get_contacts_by_company_id",
+    ),
+    path(
+        "getFundingByCompanyID/<str:id>/",
+        company_details_services.getFundingByCompanyID,
+        name="get_funding_by_company_id",
+    ),
+    path(
+        "getTriggerByCompanyID/<str:id>/",
+        company_details_services.getTriggerByCompanyID,
+        name="get_trigger_by_company_id",
     ),
 ]

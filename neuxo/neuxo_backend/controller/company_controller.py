@@ -5,7 +5,7 @@ from neuxo_backend.controller.utils import (
     getParams,
     getShowingColumns,
 )
-from neuxo_backend.models import MasterCompanies
+from neuxo_backend.models import MasterCompanies, ShowingField
 from django.db.models import Q
 
 
@@ -153,3 +153,14 @@ def getDataCompany(request):
     }
 
     return paginator, companies, showing_columns
+
+
+def updateShowingColumnsData(userId, name_columns_and_status: list[dict]):
+    count = 0
+    for column in name_columns_and_status:
+        count += 1
+        is_show = "YES" if column.get("is_show") else "NO"
+        ShowingField.objects.filter(name_columns=column["name"], user_id=userId).update(
+            is_show=is_show, order_by=count
+        )
+    return getShowingColumns(userId)
