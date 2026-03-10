@@ -1,9 +1,13 @@
 from django.urls import path  # noqa: F401
 
 from neuxo_backend.services import (
-    company_services,
     blacklist_services,
     company_details_services,
+    company_services,
+    event_services,
+    funding_services,
+    job_services,
+    watchlist_services,
 )
 
 # ----------------------------- Main Functions -----------------------------------#
@@ -115,5 +119,144 @@ urlpatterns = [
         "getTriggerByCompanyID/<str:id>/",
         company_details_services.getTriggerByCompanyID,
         name="get_trigger_by_company_id",
+    ),
+    # ----------------------------- Jobs -----------------------------------#
+    path(
+        "jobs/list/",
+        job_services.getJobs,
+        name="get_jobs",
+    ),
+    path(
+        "jobs/metadata/",
+        job_services.getMetaData,
+        name="get_jobs_metadata",
+    ),
+    path(
+        "jobs/<str:id>/",
+        job_services.getJobById,
+        name="get_job_by_id",
+    ),
+    path(
+        "jobs/download/",
+        job_services.downloadJob,
+        name="download_jobs",
+    ),
+    # ----------------------------- Events -----------------------------------#
+    path(
+        "events/list/",
+        event_services.getEvents,
+        name="get_events",
+    ),
+    path(
+        "events/country-parent/",
+        event_services.getListCountryAndParentEvent,
+        name="get_list_country_and_parent_event",
+    ),
+    path(
+        "events/<str:id>/",
+        event_services.getEventByID,
+        name="get_event_by_id",
+    ),
+    path(
+        "events/<str:id>/guests/",
+        event_services.getEventGuests,
+        name="get_event_guests",
+    ),
+    path(
+        "events/columns/guests/",
+        event_services.getColumnsEventsGuest,
+        name="get_columns_events_guest",
+    ),
+    path(
+        "events/guests/updateNote/",
+        event_services.updateNoteGuests,
+        name="update_note_guests",
+    ),
+    path(
+        "events/guests/updateEmail/",
+        event_services.updateEmailGuests,
+        name="update_email_guests",
+    ),
+    path(
+        "events/company-link/<str:id>/",
+        event_services.getCompanyLinkToEvent,
+        name="get_company_link_to_event",
+    ),
+    path(
+        "events/download/",
+        event_services.downloadEvents,
+        name="download_events",
+    ),
+    path(
+        "events/download/companies/",
+        event_services.downloadCompanyInEvents,
+        name="download_company_in_events",
+    ),
+    path(
+        "events/download/guests/",
+        event_services.downloadGuests,
+        name="download_guests",
+    ),
+    # ----------------------------- Funding -----------------------------------#
+    path(
+        "funding/list/",
+        funding_services.getFundings,
+        name="get_fundings",
+    ),
+    path(
+        "funding/metadata/",
+        funding_services.getMetaData,
+        name="get_funding_metadata",
+    ),
+    path(
+        "funding/<str:id>/",
+        funding_services.getFundingByID,
+        name="get_funding_by_id",
+    ),
+    path(
+        "funding/download/",
+        funding_services.downloadFunding,
+        name="download_funding",
+    ),
+    # ----------------------------- Watchlist -----------------------------------#
+    path(
+        "watchlist/add/",
+        watchlist_services.addCompanyToWatchList,
+        name="add_company_to_watchlist",
+    ),
+    path(
+        "watchlist/remove/",
+        watchlist_services.removeCompanyFromWatchList,
+        name="remove_company_from_watchlist",
+    ),
+    path(
+        "watchlist/list/",
+        watchlist_services.getWatchList,
+        name="get_watchlist",
+    ),
+    path(
+        "watchlist/pin/",
+        watchlist_services.PINWatchlist,
+        name="pin_watchlist",
+    ),
+    path(
+        "watchlist/editNote/",
+        watchlist_services.editNoteForCompany,
+        name="edit_note_for_company",
+    ),
+    path(
+        "watchlist/<str:id>/detail/",
+        watchlist_services.getDetailInfoForCompany,
+        name="get_detail_info_for_company",
+    ),
+    path(
+        "watchlist/notifications/",
+        watchlist_services.getAllNotifyForUser,
+        name="get_all_notify_for_user",
+    ),
+    path(
+        "watchlist/<str:id>/newNotify/",
+        watchlist_services.newNotifyToday,
+        name="new_notify_today",
     ),
 ]
