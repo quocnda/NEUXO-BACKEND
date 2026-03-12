@@ -183,6 +183,7 @@ def getContactsWithDetails(company_id: str) -> list[dict]:
     """Return contacts for a company with their experiences and emails."""
     all_data = getTriggerDataByCompanyId(company_id)
     contacts = all_data.get("contacts", [])
+    print(f"Contacts for company {company_id}: {contacts}")  # Debug log
     result = []
     for item in contacts:
         experiences = list(

@@ -491,3 +491,150 @@ class PersonalEmail(models.Model):
 
     class Meta:
         db_table = "Personal_Email"
+
+
+# ----------------------------------- ICP -----------------------------------#
+
+
+class ListICP(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    icp_name = models.TextField(blank=True, null=True)
+    icp_description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "List_ICP"
+
+
+# ----------------------------------- Mentions -----------------------------------#
+
+
+class Mentions(models.Model):
+    TYPE_CHOICES = [
+        ("SUB_DOMAIN", "SUB_DOMAIN"),
+        ("LINKEDIN", "LINKEDIN"),
+        ("TWITTER", "TWITTER"),
+    ]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    company = models.ForeignKey(
+        LinkedinCompany, on_delete=models.CASCADE, blank=False, null=False
+    )
+    note = models.TextField(blank=True, null=True)
+    type = models.TextField(blank=True, null=False, choices=TYPE_CHOICES)
+    guest_id = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "Mentions"
+
+
+class MentionsSubDomain(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    sub_domain = models.TextField(blank=True, null=True)
+    ip = models.TextField(blank=True, null=True)
+    mentions = models.ForeignKey(
+        Mentions, on_delete=models.CASCADE, blank=False, null=False
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "Mentions_SubDomain"
+
+
+class MentionsLinkedin(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    linkedin_post_url = models.TextField(blank=True, null=True)
+    linkedin_repost_url = models.TextField(blank=True, null=True)
+    description_repost = models.TextField(blank=True, null=True)
+    note = models.TextField(blank=True, null=True)
+    title = models.TextField(blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    mentions = models.ForeignKey(
+        Mentions, on_delete=models.CASCADE, blank=False, null=False
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "Mentions_Linkedin"
+
+
+class MentionsTwitter(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    twitter_post_url = models.TextField(blank=True, null=True)
+    title = models.TextField(blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    mentions = models.ForeignKey(
+        Mentions, on_delete=models.CASCADE, blank=False, null=False
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "Mentions_Twitter"
+
+
+# ----------------------------------- User Notification -----------------------------------#
+
+
+class UserNotification(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(Users, on_delete=models.CASCADE, blank=True, null=True)
+    notification = models.ForeignKey(
+        Notification, on_delete=models.CASCADE, blank=True, null=True
+    )
+    is_read = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "User_Notification"
+
+
+# ----------------------------------- News -----------------------------------#
+
+
+class NewsInformation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name_company = models.TextField(blank=True, null=True)
+    company = models.ForeignKey(
+        LinkedinCompany, on_delete=models.CASCADE, blank=True, null=True
+    )
+    link_news = models.TextField(blank=True, null=True)
+    note = models.TextField(blank=True, null=True)
+    content = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+    category = models.TextField(blank=True, null=True)
+    time_post = models.DateTimeField(default=timezone.now)
+    title = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = "News"
+
+
+# ----------------------------------- History Gen AI -----------------------------------#
+
+
+class HistoryGenAI(models.Model):
+    ROLE = [
+        ("user", "user"),
+        ("assistant", "assistant"),
+    ]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    role = models.TextField(blank=True, null=True)
+    content = models.TextField(blank=True, null=True)
+    completion_id = models.TextField(blank=True, null=True)
+    summarize_content = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+    order_number = models.IntegerField(default=0)
+    user = models.ForeignKey(Users, on_delete=models.CASCADE, blank=False, default=1)
+    company_id = models.TextField(blank=True, null=True)
+    person_contact_id = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = "History_Gen_AI"

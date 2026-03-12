@@ -235,28 +235,169 @@ urlpatterns = [
         name="get_watchlist",
     ),
     path(
-        "watchlist/pin/",
+        "watchlist/PIN/",
         watchlist_services.PINWatchlist,
         name="pin_watchlist",
     ),
     path(
-        "watchlist/editNote/",
+        "watchlist/company/editNote/",
         watchlist_services.editNoteForCompany,
         name="edit_note_for_company",
     ),
     path(
-        "watchlist/<str:id>/detail/",
-        watchlist_services.getDetailInfoForCompany,
-        name="get_detail_info_for_company",
-    ),
-    path(
-        "watchlist/notifications/",
+        "watchlist/notify/",
         watchlist_services.getAllNotifyForUser,
         name="get_all_notify_for_user",
     ),
     path(
-        "watchlist/<str:id>/newNotify/",
+        "watchlist/seenAll/",
+        watchlist_services.seenAllMention,
+        name="seen_all_mention",
+    ),
+    # AI Completions
+    path(
+        "watchlist/contact/<str:id>/create-id-completions/",
+        watchlist_services.getIDCompletionsForContacts,
+        name="get_id_completions_for_contacts",
+    ),
+    path(
+        "watchlist/company/<str:id>/create-id-completions/",
+        watchlist_services.getIDCompletionsForCompany,
+        name="get_id_completions_for_company",
+    ),
+    path(
+        "watchlist/save-history-chat/",
+        watchlist_services.saveHistoryGen,
+        name="save_history_gen",
+    ),
+    path(
+        "watchlist/contact/<str:id>/get-history-chat/",
+        watchlist_services.getAllCompletionsForContact,
+        name="get_all_completions_for_contact",
+    ),
+    path(
+        "watchlist/company/<str:id>/get-history-chat/",
+        watchlist_services.getAllCompletionsForCompany,
+        name="get_all_completions_for_company",
+    ),
+    path(
+        "watchlist/delete-history-chat/",
+        watchlist_services.deleteCompletions,
+        name="delete_completions",
+    ),
+    path(
+        "watchlist/edit-subject-chat/",
+        watchlist_services.editSubjectCompletions,
+        name="edit_subject_completions",
+    ),
+    # Mentions
+    path(
+        "watchlist/mention/<str:id>/people/",
+        watchlist_services.getMentionPerPeople,
+        name="get_mention_per_people",
+    ),
+    path(
+        "watchlist/mention/<str:id>/",
+        watchlist_services.getAllMentionedCompanyPerUser,
+        name="get_all_mentioned_company_per_user",
+    ),
+    path(
+        "watchlist/mention/",
+        watchlist_services.getAllMention,
+        name="get_all_mention",
+    ),
+    # Guest Management
+    path(
+        "watchlist/company/<str:id>/addGuestMention/",
+        watchlist_services.addNewGuestMentionForCompany,
+        name="add_new_guest_mention_for_company",
+    ),
+    path(
+        "watchlist/company/<str:id>/addGuestAvailableMention/",
+        watchlist_services.addGuestAvailableMention,
+        name="add_guest_available_mention",
+    ),
+    path(
+        "watchlist/company/<str:id>/removeGuestMention/",
+        watchlist_services.removeGuestMentionForCompany,
+        name="remove_guest_mention_for_company",
+    ),
+    # Company Management
+    path(
+        "watchlist/company/<str:id>/updateCompany/",
+        watchlist_services.updateCompany,
+        name="update_company",
+    ),
+    path(
+        "watchlist/company/<str:id>/getDetailInfo/",
+        watchlist_services.getDetailInfoForCompany,
+        name="get_detail_info_for_company",
+    ),
+    path(
+        "watchlist/company/checkHadOtherWatchlist/",
+        watchlist_services.checkHadOtherWatchlist,
+        name="check_had_other_watchlist",
+    ),
+    path(
+        "watchlist/company/checkHadCreateManual/",
+        watchlist_services.checkHadCreateManualWatchlist,
+        name="check_had_create_manual_watchlist",
+    ),
+    path(
+        "watchlist/company/<str:id>/newNotifyToday/",
         watchlist_services.newNotifyToday,
         name="new_notify_today",
+    ),
+    path(
+        "watchlist/company/<str:id>/",
+        watchlist_services.getAllGuestMentionForCompany,
+        name="get_all_guest_mention_for_company",
+    ),
+    path(
+        "watchlist/company/contact/<str:id>/updateContact/",
+        watchlist_services.updateContact,
+        name="update_contact",
+    ),
+    path(
+        "watchlist/company/contact/<str:id>/",
+        watchlist_services.getAllContactForCompany,
+        name="get_all_contact_for_company",
+    ),
+    # ICP
+    path(
+        "watchlist/ICP/list/",
+        watchlist_services.getListICP,
+        name="get_list_icp",
+    ),
+    path(
+        "watchlist/ICP/save/",
+        watchlist_services.saveICP,
+        name="save_icp",
+    ),
+    # Admin Watchlist Routes
+    path(
+        "admin/watchlist/mention/<str:id>/people/",
+        watchlist_services.getMentionPerPeoplePerAdmin,
+        name="get_mention_per_people_per_admin",
+    ),
+    path(
+        "admin/watchlist/contact/<str:id>/",
+        watchlist_services.getAllContactForCompanyPerAdmin,
+        name="get_all_contact_for_company_per_admin",
+    ),
+    path(
+        "admin/watchlist/mention/<str:id>/",
+        watchlist_services.getAllMentionedCompanyPerAdmin,
+        name="get_all_mentioned_company_per_admin",
+    ),
+    path(
+        "admin/watchlist/all-member/",
+        watchlist_services.getAllWatchlistOfMemberForAdmin,
+        name="get_all_watchlist_of_member_for_admin",
+    ),
+    path(
+        "admin/watchlist/<str:id>/list/",
+        watchlist_services.getWatchListForAdmin,
+        name="get_watchlist_for_admin",
     ),
 ]

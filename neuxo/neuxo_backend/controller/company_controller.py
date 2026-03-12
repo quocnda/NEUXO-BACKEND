@@ -19,8 +19,10 @@ def getDataCompany(request):
         .select_related("company")
     )
     print("Initial LEN COMPANIES:", companies.count())
+    print("Search key:", search_key)
     if search_key:
         companies = companies.filter(Q(company__name__icontains=search_key))
+    print("LEN COMPANIES after search key:", companies.count())
     count_trigger = request.GET.get("count_trigger", None)
     userId = request.user.get("id", None)
 

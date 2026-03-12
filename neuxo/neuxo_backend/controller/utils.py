@@ -195,15 +195,17 @@ def getFilterDataQuery(request=None, companies=None, table=None, sort_field_map=
         )
 
     if company_email:
+        
         company_email = company_email.split(",")
+        print('Company email filter:', company_email)
         if len(company_email) == 1:
             company_email = company_email[0]
-            if company_email == "0":
+            if company_email == 'false':
                 companies = companies.filter(
                     Q(company__lst_email_contact=[])
                     | Q(company__lst_email_contact__contains=["waiting"])
                 )
-            elif company_email == "1":
+            elif company_email == 'true':
                 companies = companies.filter(
                     ~Q(company__lst_email_contact=[])
                     & ~Q(company__lst_email_contact__contains=["waiting"])
