@@ -638,3 +638,340 @@ class HistoryGenAI(models.Model):
 
     class Meta:
         db_table = "History_Gen_AI"
+
+
+# ----------------------------------- Sales Person -----------------------------------#
+
+
+class SalesPerson(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = "User_Sales"
+
+
+# ----------------------------------- Custom Filter -----------------------------------#
+
+
+class CustomFilter(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(Users, on_delete=models.CASCADE, blank=True, null=True)
+    filter_name = models.TextField(blank=True, null=True)
+    filter = models.JSONField(default=dict, blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "User_Custom_Filter"
+
+
+# ----------------------------------- Mail History -----------------------------------#
+
+
+class MailHistory(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(Users, on_delete=models.CASCADE, blank=True, null=False)
+    mail_send = models.TextField(max_length=300, blank=True, null=True)
+    mail_recieved = models.TextField(max_length=300, blank=True, null=True)
+    content = models.TextField(blank=True, null=True)
+    time_send = models.DateTimeField()
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+    note = models.TextField(blank=True, null=True)
+    subject = models.TextField(blank=True, null=True)
+    main_target_mail = models.TextField(max_length=300, blank=True, null=True)
+    name_target_mail = models.TextField(max_length=300, blank=True, null=True)
+    html_mail_content = models.TextField(blank=True, null=True)
+    error_message = models.TextField(blank=True, null=True)
+    type = models.TextField(blank=True, null=True)
+    id_attachment = models.TextField(blank=True, null=True)
+    message_id = models.TextField(blank=True, null=True)
+    status_mail = models.TextField(blank=True, null=True)
+    email_ref_first_id = models.TextField(blank=True, null=True)
+    email_reply_id = models.TextField(blank=True, null=True)
+    campaign_id = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = "User_Mail_History"
+
+
+# ----------------------------------- Email Template -----------------------------------#
+
+
+class EmailTemplate(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(Users, on_delete=models.CASCADE, blank=False, null=False)
+    template_name = models.TextField(max_length=300, blank=True, null=True)
+    template_subject = models.TextField(max_length=300, blank=True, null=True)
+    template_content = models.TextField(blank=True, null=True)
+    attachments = models.JSONField(default=list, blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "Email_Template"
+
+
+# ----------------------------------- Signature -----------------------------------#
+
+
+class Signature(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user_gmail = models.ForeignKey(
+        MailAppAccount, on_delete=models.CASCADE, blank=False, null=False
+    )
+    signature_html = models.TextField(blank=False, null=False)
+    signature_name = models.TextField(blank=False, null=False, default="Default")
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+    note = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = "Signature"
+
+
+# ----------------------------------- Email History Note -----------------------------------#
+
+
+class EmailHistoryNote(models.Model):
+    TYPE_PRIORITY = [
+        ("HIGH", "HIGH"),
+        ("MEDIUM", "MEDIUM"),
+        ("LOW", "LOW"),
+    ]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    main_target_email = models.TextField(unique=False, null=False, blank=False)
+    user = models.ForeignKey(Users, on_delete=models.CASCADE, blank=False)
+    user_note = models.TextField(blank=True, null=True)
+    priority = models.TextField(default="MEDIUM", choices=TYPE_PRIORITY)
+    is_replied = models.BooleanField(default=False)
+    follow_up_date = models.DateTimeField(default=None, null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "User_Email_History_Note"
+
+
+# ----------------------------------- Email Tracker -----------------------------------#
+
+
+class EmailTracker(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tracking_id = models.CharField(max_length=100, unique=True)
+    message_id = models.CharField(max_length=255, blank=True, null=True)
+    mail_history = models.ForeignKey(
+        MailHistory, on_delete=models.CASCADE, blank=True, null=True
+    )
+    opened = models.BooleanField(default=False)
+    opened_count = models.IntegerField(default=0)
+    first_opened_at = models.DateTimeField(blank=True, null=True)
+    last_opened_at = models.DateTimeField(blank=True, null=True)
+    ip_address = models.CharField(max_length=45, blank=True, null=True)
+    user_agent = models.TextField(blank=True, null=True)
+    location_data = models.JSONField(default=dict, blank=True, null=True)
+    status = models.CharField(max_length=100, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "User_Email_Tracker"
+        indexes = [
+            models.Index(fields=["tracking_id"]),
+            models.Index(fields=["message_id"]),
+            models.Index(fields=["opened"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+
+# ----------------------------------- Email Opened Notification -----------------------------------#
+
+
+class EmailOpenedNotification(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(Users, on_delete=models.CASCADE, blank=True, null=True)
+    email_tracker = models.OneToOneField(
+        EmailTracker, on_delete=models.CASCADE, null=True, related_name="opened_notification"
+    )
+    data = models.JSONField(default=dict, blank=True, null=True)
+    last_data = models.JSONField(default=dict, blank=True, null=True)
+    is_read = models.BooleanField(default=False)
+    is_fetched = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "Email_Opened_Notification"
+        indexes = [
+            models.Index(fields=["user", "is_fetched"]),
+            models.Index(fields=["email_tracker"]),
+            models.Index(fields=["user", "is_read"]),
+        ]
+
+
+# ----------------------------------- News Feed SkyNet -----------------------------------#
+
+
+class NewsFeedSkyNet(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.TextField(blank=True, null=True)
+    title = models.TextField(blank=True, null=True)
+    link = models.TextField(blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    avatar_url = models.TextField(blank=True, null=True)
+    score = models.FloatField(blank=True, null=True)
+    posted_date = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "News_Feed_SkyNet"
+
+
+# ----------------------------------- Report Email -----------------------------------#
+
+
+class ReportEmailDimTime(models.Model):
+    full_date = models.DateField()
+    year = models.IntegerField()
+    month = models.IntegerField()
+    day = models.IntegerField()
+    quarter = models.CharField(max_length=50)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "DIM_Report_Email_Time"
+
+
+class FactReportEmail(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(Users, on_delete=models.CASCADE)
+    dim_time = models.ForeignKey(
+        ReportEmailDimTime, on_delete=models.CASCADE, null=True, blank=True
+    )
+    main_target_email = models.TextField(unique=False, null=False, blank=False)
+    new_emails_sent = models.IntegerField(default=0)
+    emails_received = models.IntegerField(default=0)
+    is_replied = models.BooleanField(default=False)
+    total_email_sent = models.IntegerField(default=0)
+    followup_1_count = models.IntegerField(default=0)
+    followup_2_count = models.IntegerField(default=0)
+    followup_3_count = models.IntegerField(default=0)
+    followup_4_count = models.IntegerField(default=0)
+    followup_5_count = models.IntegerField(default=0)
+    followup_5plus_count = models.IntegerField(default=0)
+    time_send = models.DateField(null=True, blank=True)
+
+    class Meta:
+        db_table = "FACT_Report_Email"
+
+
+# ----------------------------------- Email Campaign/Sequence -----------------------------------#
+
+
+class SequenceEmail(models.Model):
+    STATUS = [
+        ("PENDING", "PENDING"),
+        ("PROCESSING", "PROCESSING"),
+        ("COMPLETED", "COMPLETED"),
+    ]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(Users, on_delete=models.CASCADE, blank=False)
+    signature = models.ForeignKey(Signature, on_delete=models.CASCADE, blank=True, null=True)
+    sequence_name = models.TextField(max_length=500, blank=True, null=True)
+    email_targets = models.JSONField(default=list, blank=True, null=True)
+    start_date = models.DateTimeField(default=timezone.now)
+    end_date = models.DateTimeField(null=True, blank=True)
+    sequence_status = models.TextField(default="PENDING", choices=STATUS)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    campaign_name = models.TextField(max_length=500, blank=True, null=True)
+    source = models.TextField(max_length=500, blank=True, null=True)
+    event_id = models.TextField(max_length=500, blank=True, null=True)
+    num_email_sent = models.IntegerField(null=True, default=0)
+    num_email_replied = models.IntegerField(null=True, default=0)
+    num_email_opened = models.IntegerField(null=True, default=0)
+    enable_bimonthly_send = models.BooleanField(default=False)
+    max_email_bimonthly = models.IntegerField(null=True)
+    user_hot_trigger = models.BooleanField(default=False)
+    hot_trigger_condition = models.JSONField(default=list, blank=True, null=True)
+    day_start_bimonthly = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        db_table = "Automate_Email"
+
+
+class SequenceEmailStep(models.Model):
+    STATUS = [
+        ("PENDING", "PENDING"),
+        ("PROCESSING", "PROCESSING"),
+        ("COMPLETED", "COMPLETED"),
+    ]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    sequence = models.ForeignKey(SequenceEmail, on_delete=models.CASCADE, blank=False)
+    step_number = models.IntegerField(default=0)
+    status = models.TextField(default="PENDING")
+    follow_up_date = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_paused = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "Automate_Email_Step"
+
+
+class SequenceEmailStepHistory(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email_step = models.ForeignKey(SequenceEmailStep, on_delete=models.CASCADE, blank=False)
+    email_sender = models.TextField(max_length=300, blank=True, null=True)
+    email_target = models.TextField(max_length=300, blank=False, null=False)
+    subject = models.TextField(blank=True, null=True)
+    content = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_sent = models.BooleanField(default=False)
+    email_prompt = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = "Automate_Email_Step_History"
+
+
+# ----------------------------------- Mail Gen History -----------------------------------#
+
+
+class MailGenHistory(models.Model):
+    STATUS = [
+        ("RUNNING", "RUNNING"),
+        ("COMPLETED", "COMPLETED"),
+        ("FAILED", "FAILED"),
+    ]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    sequence_id = models.TextField(blank=True, null=True)
+    email = models.TextField(blank=True, null=True)
+    step_number = models.IntegerField(default=0)
+    status = models.TextField(default="RUNNING")
+    subject = models.TextField(blank=True, null=True)
+    content = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    email_prompt = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = "Mail_Gen_History"
+
+
+# ----------------------------------- Mail Template Bimonthly -----------------------------------#
+
+
+class MailTemplateBimonthly(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    subject = models.TextField(blank=True, null=True)
+    content = models.TextField(blank=True, null=True)
+    link_and_images = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+    order_of_mail = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = "Mail_Template_Bimonthly"

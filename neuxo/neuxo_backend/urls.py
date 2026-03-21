@@ -2,11 +2,16 @@ from django.urls import path  # noqa: F401
 
 from neuxo_backend.services import (
     blacklist_services,
+    campaign_services,
     company_details_services,
     company_services,
+    custom_filter_services,
+    email_services,
     event_services,
     funding_services,
+    gen_email_services,
     job_services,
+    tracker_services,
     watchlist_services,
 )
 
@@ -399,5 +404,157 @@ urlpatterns = [
         "admin/watchlist/<str:id>/list/",
         watchlist_services.getWatchListForAdmin,
         name="get_watchlist_for_admin",
+    ),
+    # ----------------------------- Email Management -----------------------------------#
+    path(
+        "mail/addAccount/",
+        email_services.saveEmailAccount,
+        name="save_email_account",
+    ),
+    path(
+        "mail/getAllConversation/",
+        email_services.getAllConversationStatic,
+        name="get_all_conversation_static",
+    ),
+    path(
+        "mail/getMailDetails/",
+        email_services.getMailConversation,
+        name="get_mail_conversation",
+    ),
+    path(
+        "mail/updateRecord/",
+        email_services.updateRecord,
+        name="update_email_record",
+    ),
+    path(
+        "mail/setFollowUpDateForReplied/",
+        email_services.setFollowUpDateForReplied,
+        name="set_follow_up_date",
+    ),
+    # Email Signatures
+    path(
+        "mail/getSignatures/",
+        email_services.getAllSignatureMail,
+        name="get_all_signature_mail",
+    ),
+    path(
+        "mail/putSignature/",
+        email_services.putSignatureMail,
+        name="put_signature_mail",
+    ),
+    path(
+        "mail/deleteSignature/<str:id>/",
+        email_services.deleteSignatureMail,
+        name="delete_signature_mail",
+    ),
+    # ----------------------------- Email Template -----------------------------------#
+    path(
+        "email/template/create/",
+        email_services.createEmailTemplate,
+        name="create_email_template",
+    ),
+    path(
+        "email/template/list/",
+        email_services.getEmailTemplate,
+        name="get_email_template",
+    ),
+    path(
+        "email/template/update/<str:id>/",
+        email_services.updateEmailTemplate,
+        name="update_email_template",
+    ),
+    path(
+        "email/template/delete/<str:id>/",
+        email_services.deleteEmailTemplate,
+        name="delete_email_template",
+    ),
+    path(
+        "email/template/<str:id>/",
+        email_services.getEmailTemplateById,
+        name="get_email_template_by_id",
+    ),
+    # ----------------------------- Campaign Management -----------------------------------#
+    path(
+        "campaign/email/get-report/",
+        campaign_services.getCampaignStatic,
+        name="get_campaign_static",
+    ),
+    path(
+        "campaign/email/updateStatus/<str:id>/",
+        campaign_services.updateStatusCampaign,
+        name="update_status_campaign",
+    ),
+    path(
+        "campaign/email/get-detail-static/<str:id>/",
+        campaign_services.getDetailCampaign,
+        name="get_detail_campaign",
+    ),
+    path(
+        "campaign/email/get-about/<str:id>/",
+        campaign_services.getAboutCampaign,
+        name="get_about_campaign",
+    ),
+    path(
+        "campaign/email/get-total-report-mail/",
+        campaign_services.getAllEmailStaticByAdmin,
+        name="get_all_email_static_by_admin",
+    ),
+    path(
+        "campaign/email/edit-name-campaign/<str:id>/",
+        campaign_services.editNameCampaign,
+        name="edit_name_campaign",
+    ),
+    # ----------------------------- Custom Filter -----------------------------------#
+    path(
+        "customFilter/list/",
+        custom_filter_services.getCustomFilters,
+        name="get_custom_filters",
+    ),
+    path(
+        "customFilter/delete/<str:id>/",
+        custom_filter_services.deleteCustomFilter,
+        name="delete_custom_filter",
+    ),
+    path(
+        "customFilter/save/",
+        custom_filter_services.saveCustomFilter,
+        name="save_custom_filter",
+    ),
+    # ----------------------------- Email Tracking -----------------------------------#
+    path(
+        "email/tracking/<str:tracking_id>/",
+        tracker_services.email_tracking_pixel,
+        name="email_tracking_pixel",
+    ),
+    path(
+        "email/tracking/stats/",
+        tracker_services.email_tracking_stats,
+        name="email_tracking_stats",
+    ),
+    path(
+        "logging/",
+        tracker_services.logging,
+        name="tracker_logging",
+    ),
+    # ----------------------------- Gen-Email (AI) -----------------------------------#
+    path(
+        "gen-email/generate/",
+        gen_email_services.generateEmail,
+        name="generate_email",
+    ),
+    path(
+        "gen-email/generate-bulk/",
+        gen_email_services.generateBulkEmails,
+        name="generate_bulk_emails",
+    ),
+    path(
+        "gen-email/validate/",
+        gen_email_services.validateEmailContent,
+        name="validate_email_content",
+    ),
+    path(
+        "gen-email/types/",
+        gen_email_services.getEmailTypes,
+        name="get_email_types",
     ),
 ]
