@@ -12,3 +12,5 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+neuxo/neuxo_backend/data/

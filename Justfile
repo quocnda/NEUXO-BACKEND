@@ -28,6 +28,10 @@ upgrade:
 dev: 
     uv run -- python neuxo/manage.py runserver 0.0.0.0:8091
 
+# Run Celery worker for the Django app in neuxo
+run-celery:
+    cd neuxo && uv run celery -A neuxo worker -l info
+
 # --------------------------
 # Lint, format and run tests
 # --------------------------

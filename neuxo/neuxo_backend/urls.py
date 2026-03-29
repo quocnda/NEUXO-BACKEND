@@ -424,6 +424,11 @@ urlpatterns = [
         name="get_all_conversation_static",
     ),
     path(
+        "mail/get-list-email-tracking",
+        email_services.getListEmailTracking,
+        name="get_list_email_tracking",
+    ),
+    path(
         "mail/getMailDetails",
         email_services.getMailConversation,
         name="get_mail_conversation",
@@ -448,6 +453,11 @@ urlpatterns = [
         "mail/putSignature",
         email_services.putSignatureMail,
         name="put_signature_mail",
+    ),
+    path(
+        "mail/putSignature/",
+        email_services.putSignatureMail,
+        name="put_signature_mail_legacy",
     ),
     path(
         "mail/deleteSignature/<str:id>",
@@ -479,6 +489,27 @@ urlpatterns = [
         "email/template/<str:id>",
         email_services.getEmailTemplateById,
         name="get_email_template_by_id",
+    ),
+    # ----------------------------- Email Automation -----------------------------------#
+    path(
+        "automate/email/create-sequence",
+        email_services.createSequenceEmail,
+        name="create_sequence_email",
+    ),
+    path(
+        "automate/email/preview-email",
+        email_services.previewEmail,
+        name="preview_email",
+    ),
+    path(
+        "automate/email/submit-sequence",
+        email_services.submitSequenceEmail,
+        name="submit_sequence_email",
+    ),
+    path(
+        "automate/email/check-email-sent",
+        email_services.checkEmailSent,
+        name="check_email_sent",
     ),
     # ----------------------------- Campaign Management -----------------------------------#
     path(
