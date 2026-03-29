@@ -16,7 +16,7 @@ from neuxo_backend.controller.company_controller import (
 from users.utils.utils import requireLogin
 from neuxo_backend.services import PARAMETERS
 from neuxo_backend.controller.utils import getShowingColumns, getShowingColumnsCustom
-from neuxo_backend.models import LinkedinCompany
+from neuxo_backend.models import LinkedinCompany, SalesPerson
 from io import BytesIO
 
 import pandas as pd
@@ -87,6 +87,32 @@ def getMatchingCompany(request: HttpRequest) -> JsonResponse:
             "pagination": paginator,
             "data": list(output_data),
         },
+        status=HTTP_200_OK,
+    )
+
+
+@extend_schema(
+    parameters=[],
+    responses={"200": "Success"},
+    auth=None,
+    operation_id="GET_AllSales",
+    tags=["Matching"],
+    operation=None,
+)
+@csrf_exempt
+@api_view(["GET"])
+@requireLogin
+def getAllSales(request: HttpRequest) -> JsonResponse:
+    if request.method != "GET":
+        return JsonResponse(
+            {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
+        )
+
+    sales_data = list(SalesPerson.objects.all().values_list("name", flat=True))
+    sales_data.append("None")
+
+    return JsonResponse(
+        {"message": "Success", "data": sales_data},
         status=HTTP_200_OK,
     )
 

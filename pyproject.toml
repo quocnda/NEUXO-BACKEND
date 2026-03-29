@@ -141,6 +141,7 @@ dependencies = [
   "zstandard==0.23.0",
   "mysqlclient==2.1.1",
   "drf-spectacular-sidecar",
+  "celery==5.4.0"
 ]
 [dependency-groups]
 dev = [

@@ -4,11 +4,13 @@ Handles email-related API endpoints
 """
 from __future__ import annotations
 
+import imaplib
 import os
 import traceback
 from datetime import datetime
 from uuid import uuid4
 
+from django.db import transaction
 from django.http import HttpRequest, JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -34,12 +36,14 @@ from neuxo_backend.controller.email_controller import (
     update_email_template,
 )
 from neuxo_backend.models import MailAppAccount
+from neuxo_backend.tasks import enqueue_mail_account_crawl
 from neuxo_backend.services.utils import (
     PARAMETERS,
     PARAMETERS_EMAIL,
     getParams,
     getUserID,
 )
+from users.utils.crypto_hash import encrypt_password
 from users.utils.utils import requireLogin
 
 
@@ -83,6 +87,7 @@ def saveEmailAccount(request: HttpRequest) -> JsonResponse:
                 status=HTTP_400_BAD_REQUEST,
             )
 
+        email = email.strip().lower()
         password = password.strip()
         user_id = getUserID(request)
 
@@ -96,15 +101,34 @@ def saveEmailAccount(request: HttpRequest) -> JsonResponse:
                 status=HTTP_400_BAD_REQUEST,
             )
 
-        # Create the account
-        MailAppAccount.objects.create(
+        try:
+            mail = imaplib.IMAP4_SSL("imap.gmail.com")
+            mail.login(email.lower().strip(), password)
+            mail.logout()
+        except imaplib.IMAP4.error:
+            return JsonResponse(
+                {
+                    "message": "Cannot connect to Gmail with this app password. Please verify IMAP is enabled and the app password is correct."
+                },
+                status=HTTP_400_BAD_REQUEST,
+            )
+
+        encrypted_password = encrypt_password(password)
+
+        account = MailAppAccount.objects.create(
             email=email,
-            password_app=password,  # In production, encrypt this
+            password_app=encrypted_password,
             user_id=user_id,
         )
 
+        transaction.on_commit(
+            lambda: enqueue_mail_account_crawl.delay(str(account.id))
+        )
+
         return JsonResponse(
-            {"message": "Email account added successfully"},
+            {
+                "message": "Email account added successfully. Mailbox crawl has been queued and will run in the background."
+            },
             status=HTTP_200_OK,
         )
 

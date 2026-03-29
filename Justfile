@@ -24,15 +24,9 @@ upgrade:
     uv lock --upgrade
     prek auto-update
 
-# ---------------------
-# Run Harmonic services
-# ---------------------
-
-# Run Harmonic API
-# [group('Run Harmonic services')]
-# dev-api:
-#     uv run fastapi dev ./harmonic-api/src/harmonic_api/api/main.py
-
+# Dev environment
+dev: 
+    uv run -- python neuxo/manage.py runserver 0.0.0.0:8091
 
 # --------------------------
 # Lint, format and run tests
@@ -108,7 +102,7 @@ docker *FLAGS:
 # [group('Deployments')]
 build FILE:
     #!/usr/bin/sh
-    image_name="harmonic-ai-v2:latest"
+    image_name="neuxo:latest"
     echo "Building ${image_name}..."
     echo
     docker build --no-cache --tag ${image_name} --file docker/{{ FILE }}.Dockerfile .

@@ -6,7 +6,9 @@ from neuxo_backend.controller.utils import (
     getShowingColumns,
 )
 from neuxo_backend.models import MasterCompanies, ShowingField
+from django.db import models
 from django.db.models import Q
+from users.models import UserWatchList
 
 
 def getDataCompany(request):
@@ -34,6 +36,9 @@ def getDataCompany(request):
         companies = companies.filter(updated_at__range=[start_date, end_date])
     print("LEN COMPANIES:", companies.count())
     lst_data = []
+    user_watchlist = UserWatchList.objects.filter(user_id=userId).values_list(
+        "company_id", flat=True
+    )
     sort_field_map = {
         "company": "company__name",
         "followers": "company__followers",
@@ -92,6 +97,7 @@ def getDataCompany(request):
         labels = (
             ", ".join(company["company__labels"]) if company["company__labels"] else ""
         )
+        is_in_user_watchlist = company["company__id"] in user_watchlist
 
         dict_company = {
             "company_id": company["company__id"],
@@ -118,6 +124,7 @@ def getDataCompany(request):
             "note": company["company__note_of_user"],
             "avatar_url": company["company__avatar_url"],
             "short_description": company["company__short_description"],
+            "watchlist": is_in_user_watchlist,
             "lst_email": company["company__lst_email_contact"]
             if company["company__lst_email_contact"]
             else [],
@@ -146,6 +153,19 @@ def getDataCompany(request):
         ]
         # Update total count after applying count_trigger filter
         total_count = len(companies)
+
+    company_ids = [company["company_id"] for company in companies]
+    watchlist_counts = {}
+    if company_ids:
+        watchlist_counts = dict(
+            UserWatchList.objects.filter(company_id__in=company_ids)
+            .values("company_id")
+            .annotate(count=models.Count("id"))
+            .values_list("company_id", "count")
+        )
+
+    for company in companies:
+        company["is_in_watchlist"] = watchlist_counts.get(company["company_id"], 0)
 
     paginator = {
         "page": page,
