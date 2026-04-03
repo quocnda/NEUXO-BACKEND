@@ -13,6 +13,9 @@ from neuxo_backend.controller.company_controller import (
     getDataCompany,
     updateShowingColumnsData,
 )
+from neuxo_backend.controller.company_details_controller import (
+    getCompanyDetailById,
+)
 from users.utils.utils import requireLogin
 from neuxo_backend.services import PARAMETERS
 from neuxo_backend.controller.utils import getShowingColumns, getShowingColumnsCustom
@@ -294,3 +297,36 @@ def getColumnField(request: HttpRequest) -> JsonResponse:
     return JsonResponse(
         {"message": "Success", "columns": showing_columns}, status=HTTP_200_OK
     )
+
+
+#-------------------------------------- Show company detail --------------------------------------#
+
+@extend_schema(
+    parameters=[],
+    responses={"200": "Success"},
+    auth=None,
+    operation_id="GET_CompanyById",
+    tags=["Company"],
+    operation=None,
+)
+@csrf_exempt
+@api_view(["GET"])
+@requireLogin
+def getCompanyById(request: HttpRequest, id: str) -> JsonResponse:
+    if request.method != "GET":
+        return JsonResponse(
+            {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
+        )
+    try:
+        user_id = request.user.get("id", None)
+        data = getCompanyDetailById(user_id, id)
+        if not data:
+            return JsonResponse(
+                {"message": "No data found"}, status=HTTP_400_BAD_REQUEST
+            )
+        return JsonResponse({"message": "Success", "data": data}, status=HTTP_200_OK)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({"message": str(e)}, status=HTTP_400_BAD_REQUEST)
+        return JsonResponse({"message": str(e)}, status=HTTP_400_BAD_REQUEST)
