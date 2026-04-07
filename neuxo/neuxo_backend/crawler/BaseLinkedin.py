@@ -9,11 +9,7 @@ import requests
 from django.db.models import Q
 from django.utils import timezone
 from . import DEFAULT_MAP_ACTOR_TO_ID
-from neuxo_backend.models import (
-    LinkedinCompany,
-    LinkedinPersonalEmail,
-    ApifyToken
-)
+from neuxo_backend.models import LinkedinCompany, LinkedinPersonalEmail, ApifyToken
 
 ActorName = Literal[
     "LINKEDIN_GET_LEADS",
@@ -51,7 +47,9 @@ class BaseLinkedin:
 
     DEFAULT_RUN_INPUT: ClassVar[dict[str, Any]] = {}
 
-    def __init__(self, actor_name: ActorName | None = None, apify_token: str | None = None) -> None:
+    def __init__(
+        self, actor_name: ActorName | None = None, apify_token: str | None = None
+    ) -> None:
         self.actor_name = actor_name
         self.apify_token = apify_token or self._select_apify_token()
 
@@ -104,21 +102,34 @@ class BaseLinkedin:
             current_status = (token_obj.status or "").upper()
 
             if current_status == cls.STATUS_ACTIVE:
-                next_status, next_time_available = cls._get_usage_status_from_token(token_obj.token)
+                next_status, next_time_available = cls._get_usage_status_from_token(
+                    token_obj.token
+                )
                 if not next_status:
                     continue
                 token_obj.status = next_status
                 token_obj.next_time_available = next_time_available
-                token_obj.save(update_fields=["status", "next_time_available", "updated_at"])
+                token_obj.save(
+                    update_fields=["status", "next_time_available", "updated_at"]
+                )
                 continue
 
             if current_status in {cls.STATUS_UNAVAILABLE, "INACTIVE"}:
-                if token_obj.next_time_available and token_obj.next_time_available >= now:
+                if (
+                    token_obj.next_time_available
+                    and token_obj.next_time_available >= now
+                ):
                     next_status, _ = cls._get_usage_status_from_token(token_obj.token)
                     if next_status == cls.STATUS_ACTIVE:
                         token_obj.status = cls.STATUS_ACTIVE
                         token_obj.next_time_available = None
-                        token_obj.save(update_fields=["status", "next_time_available", "updated_at"])
+                        token_obj.save(
+                            update_fields=[
+                                "status",
+                                "next_time_available",
+                                "updated_at",
+                            ]
+                        )
 
     @classmethod
     def _select_apify_token(cls) -> str:
@@ -193,14 +204,22 @@ class BaseLinkedin:
         if not url:
             return ""
         return url.strip().rstrip("/")
+
     @staticmethod
     def _get_linkedin_uid(url: str | None) -> str | None:
         if not url:
             return None
-        uid = url.split('company/')[-1] if 'company/' in url else url.split('in/')[-1] if 'in/' in url else None
+        uid = (
+            url.split("company/")[-1]
+            if "company/" in url
+            else url.split("in/")[-1]
+            if "in/" in url
+            else None
+        )
         if uid:
-            return uid.replace('/', '').strip()
+            return uid.replace("/", "").strip()
         return None
+
     @classmethod
     def _extract_website_terms(cls, website: str | None) -> list[str]:
         if not website:
@@ -244,7 +263,11 @@ class BaseLinkedin:
         normalized = BaseLinkedin._normalize_url(url)
         if not normalized:
             return None
-        match = re.search(r"(https?://(?:[a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+)", normalized, re.IGNORECASE)
+        match = re.search(
+            r"(https?://(?:[a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+)",
+            normalized,
+            re.IGNORECASE,
+        )
         if not match:
             return None
         return BaseLinkedin._normalize_url(match.group(1))
@@ -254,22 +277,34 @@ class BaseLinkedin:
         normalized = BaseLinkedin._normalize_url(url)
         if not normalized:
             return None
-        match = re.search(r"(https?://(?:[a-z]{2,3}\.)?linkedin\.com/in/[^/?#]+)", normalized, re.IGNORECASE)
+        match = re.search(
+            r"(https?://(?:[a-z]{2,3}\.)?linkedin\.com/in/[^/?#]+)",
+            normalized,
+            re.IGNORECASE,
+        )
         if not match:
             return None
         return BaseLinkedin._normalize_url(match.group(1))
 
-    def _find_company(self, company_linkedin_url: str | None = None, company_website: str | None = None) -> LinkedinCompany | None:
+    def _find_company(
+        self,
+        company_linkedin_url: str | None = None,
+        company_website: str | None = None,
+    ) -> LinkedinCompany | None:
         uid_linkedin = self._get_linkedin_uid(company_linkedin_url)
         company_website = self._normalize_url(company_website)
 
         company_query = Q()
         has_company_lookup = False
         if uid_linkedin:
-            company_query |= Q(linkedin_url=company_linkedin_url) | Q(linkedin_url=f"{company_linkedin_url}")
+            company_query |= Q(linkedin_url=company_linkedin_url) | Q(
+                linkedin_url=f"{company_linkedin_url}"
+            )
             has_company_lookup = True
         if company_website:
-            company_query |= Q(website=company_website) | Q(website=f"{company_website}/")
+            company_query |= Q(website=company_website) | Q(
+                website=f"{company_website}/"
+            )
             has_company_lookup = True
 
         if not has_company_lookup:
@@ -277,14 +312,17 @@ class BaseLinkedin:
         return LinkedinCompany.objects.filter(company_query).first()
 
     @staticmethod
-    def _find_person_by_linkedin_url(person_url: str | None) -> LinkedinPersonalEmail | None:
+    def _find_person_by_linkedin_url(
+        person_url: str | None,
+    ) -> LinkedinPersonalEmail | None:
         normalized_person_url = BaseLinkedin._normalize_url(person_url)
         if not normalized_person_url:
             return None
 
         return (
             LinkedinPersonalEmail.objects.filter(
-                Q(linkedin_url=normalized_person_url) | Q(linkedin_url=f"{normalized_person_url}/")
+                Q(linkedin_url=normalized_person_url)
+                | Q(linkedin_url=f"{normalized_person_url}/")
             )
             .select_related("company")
             .first()
@@ -300,10 +338,14 @@ class BaseLinkedin:
         input_company_url = self._extract_linkedin_company_url(input_url)
         if input_company_url:
             company_url_candidates = [input_company_url]
-            author_universal_name = self._safe_str(self._dict_get(post, ["author", "universalName"]))
+            author_universal_name = self._safe_str(
+                self._dict_get(post, ["author", "universalName"])
+            )
             if author_universal_name:
                 company_url_candidates.append(
-                    self._normalize_url(f"https://www.linkedin.com/company/{author_universal_name}")
+                    self._normalize_url(
+                        f"https://www.linkedin.com/company/{author_universal_name}"
+                    )
                 )
 
             for company_url in company_url_candidates:
@@ -328,9 +370,15 @@ class BaseLinkedin:
             return None, None
 
         company_url_candidates = [self._extract_linkedin_company_url(input_url)]
-        author_universal_name = self._safe_str(self._dict_get(post, ["author", "universalName"]))
+        author_universal_name = self._safe_str(
+            self._dict_get(post, ["author", "universalName"])
+        )
         if author_universal_name:
-            company_url_candidates.append(self._normalize_url(f"https://www.linkedin.com/company/{author_universal_name}"))
+            company_url_candidates.append(
+                self._normalize_url(
+                    f"https://www.linkedin.com/company/{author_universal_name}"
+                )
+            )
 
         for company_url in company_url_candidates:
             if not company_url:
@@ -362,4 +410,3 @@ class BaseLinkedin:
             return None
         first_item = text.split(",", 1)[0].strip()
         return first_item or None
-

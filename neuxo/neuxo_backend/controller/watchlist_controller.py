@@ -2,16 +2,14 @@ from __future__ import annotations
 
 import logging
 import re
-import operator
 import threading
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime, timedelta
-from functools import reduce
 
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db import transaction
-from django.db.models import Case, CharField, F, JSONField, Q, TextField, Value, When
+from django.db.models import Case, F, JSONField, Q, TextField, Value, When
 from django.db.models.query import QuerySet
 from django.utils import timezone
 
@@ -316,9 +314,7 @@ def get_watchlist_data(request):
         )
 
     if search is not None:
-        company_watchlist = company_watchlist.filter(
-            Q(company__name__icontains=search)
-        )
+        company_watchlist = company_watchlist.filter(Q(company__name__icontains=search))
 
     if icp_id is not None:
         list_icp_id = icp_id.split(",")
@@ -459,11 +455,9 @@ def get_watchlist_by_user_team(list_icp=None, search=None, listUserId=[]):
     company_watchlist = UserWatchList.objects.filter(
         user_id__in=listUserId
     ).select_related("company", "ICP", "user")
-    
+
     if search is not None:
-        company_watchlist = company_watchlist.filter(
-            Q(company__name__icontains=search)
-        )
+        company_watchlist = company_watchlist.filter(Q(company__name__icontains=search))
 
     if list_icp is not None:
         company_watchlist = company_watchlist.filter(ICP__id__in=list_icp)
@@ -592,7 +586,9 @@ def _run_watchlist_linkedin_pipeline(company_id: str) -> None:
     try:
         company = LinkedinCompany.objects.filter(id=company_id).first()
         if company is None:
-            _append_watchlist_pipeline_log(company_id, "company not found, skip pipeline")
+            _append_watchlist_pipeline_log(
+                company_id, "company not found, skip pipeline"
+            )
             return
 
         company_name = (company.name or "").strip()
@@ -616,7 +612,9 @@ def _run_watchlist_linkedin_pipeline(company_id: str) -> None:
 
         lead_records = []
         if company_website:
-            lead_records = leads_service.run_get_leads_and_upsert_by_company_url([company_website])
+            lead_records = leads_service.run_get_leads_and_upsert_by_company_url(
+                [company_website]
+            )
         _append_watchlist_pipeline_log(company_id, f"lead_records={len(lead_records)}")
 
         people_urls = [
@@ -628,29 +626,45 @@ def _run_watchlist_linkedin_pipeline(company_id: str) -> None:
 
         profile_records = []
         if people_urls:
-            profile_records = profile_service.run_get_profiles_and_upsert_by_query(people_urls)
-        _append_watchlist_pipeline_log(company_id, f"profile_records={len(profile_records)}")
+            profile_records = profile_service.run_get_profiles_and_upsert_by_query(
+                people_urls
+            )
+        _append_watchlist_pipeline_log(
+            company_id, f"profile_records={len(profile_records)}"
+        )
 
-        post_urls = list(dict.fromkeys([
-            *([company_linkedin_url] if company_linkedin_url else []),
-            *people_urls,
-        ]))
+        post_urls = list(
+            dict.fromkeys(
+                [
+                    *([company_linkedin_url] if company_linkedin_url else []),
+                    *people_urls,
+                ]
+            )
+        )
 
         post_records = []
         if post_urls:
-            post_records = post_service.run_get_posts_and_upsert_mentions_by_urls(post_urls)
+            post_records = post_service.run_get_posts_and_upsert_mentions_by_urls(
+                post_urls
+            )
         _append_watchlist_pipeline_log(company_id, f"post_records={len(post_records)}")
 
         job_records = []
         if company_name:
-            job_records = job_service.run_get_jobs_and_upsert_by_company_names([company_name])
+            job_records = job_service.run_get_jobs_and_upsert_by_company_names(
+                [company_name]
+            )
         if company_website:
             subdomain_count = sub_domain.getSubdomainsByLinkCompany(company_website)
-            _append_watchlist_pipeline_log(company_id, f"subdomain_count={subdomain_count}")
+            _append_watchlist_pipeline_log(
+                company_id, f"subdomain_count={subdomain_count}"
+            )
         _append_watchlist_pipeline_log(company_id, f"job_records={len(job_records)}")
         _append_watchlist_pipeline_log(company_id, "linkedin pipeline completed")
     except Exception as exc:
-        logger.exception("Watchlist LinkedIn pipeline failed for company_id=%s", company_id)
+        logger.exception(
+            "Watchlist LinkedIn pipeline failed for company_id=%s", company_id
+        )
         _append_watchlist_pipeline_log(
             company_id,
             f"linkedin pipeline failed: {type(exc).__name__}: {exc}",
@@ -764,7 +778,13 @@ def save_icp_for_company(user_id: int, company_id: str, icp_id: str) -> tuple:
 # ------------------------------------ Guest Management ------------------------------------#
 
 
-def add_new_guest_mention(user_id: int, company_id: str, linkedin_url: str, twitter_url: str = None, email: str = None) -> tuple:
+def add_new_guest_mention(
+    user_id: int,
+    company_id: str,
+    linkedin_url: str,
+    twitter_url: str = None,
+    email: str = None,
+) -> tuple:
     """Add a new guest mention for a company."""
     linkedin_url = linkedin_url.strip("/")
     company = LinkedinCompany.objects.filter(id=company_id).first()
@@ -786,7 +806,9 @@ def add_new_guest_mention(user_id: int, company_id: str, linkedin_url: str, twit
             company_id=company_id,
         )
 
-        user_watchlist = UserWatchList.objects.get(user_id=user_id, company_id=company_id)
+        user_watchlist = UserWatchList.objects.get(
+            user_id=user_id, company_id=company_id
+        )
         target_guest_data = user_watchlist.target_guest
 
         if target_guest_data is None:
@@ -796,7 +818,11 @@ def add_new_guest_mention(user_id: int, company_id: str, linkedin_url: str, twit
         user_watchlist.target_guest = target_guest_data
         user_watchlist.save()
 
-    return True, "Add person success, please wait for a moment to get data", str(new_guest.id.hex)
+    return (
+        True,
+        "Add person success, please wait for a moment to get data",
+        str(new_guest.id.hex),
+    )
 
 
 def add_guest_available_mention(user_id: int, company_id: str, guest_id: str) -> tuple:
@@ -848,7 +874,9 @@ def get_all_guest_mention_for_company(user_id: int, company_id: str) -> list:
     return data
 
 
-def remove_guest_mention_for_company(user_id: int, company_id: str, guest_id: str) -> tuple:
+def remove_guest_mention_for_company(
+    user_id: int, company_id: str, guest_id: str
+) -> tuple:
     """Remove a guest mention from a company."""
     company_watchlist = UserWatchList.objects.filter(
         user_id=user_id, company_id=company_id
@@ -875,7 +903,7 @@ def get_all_contact_for_company(user_id: int, company_id: str) -> list:
     contact_data = getTriggerDataByCompanyId(company_id)
     if not contact_data:
         return []
-    
+
     contacts = contact_data.get("contacts", [])
 
     user_watchlist = UserWatchList.objects.filter(
@@ -903,7 +931,9 @@ def get_all_contact_for_company(user_id: int, company_id: str) -> list:
 # ------------------------------------ Update Company/Contact ------------------------------------#
 
 
-def update_company(company_id: str, twitter_url: str = None, website: str = None, country: str = None) -> tuple:
+def update_company(
+    company_id: str, twitter_url: str = None, website: str = None, country: str = None
+) -> tuple:
     """Update company information."""
     company = LinkedinCompany.objects.filter(id=company_id).first()
     if not company:
@@ -920,7 +950,9 @@ def update_company(company_id: str, twitter_url: str = None, website: str = None
     return True, "Success"
 
 
-def update_contact(contact_id: str, linkedin_url: str = None, twitter_url: str = None) -> tuple:
+def update_contact(
+    contact_id: str, linkedin_url: str = None, twitter_url: str = None
+) -> tuple:
     """Update contact information."""
     personal_contact = LinkedinPersonalEmail.objects.filter(id=contact_id).first()
     if not personal_contact:
@@ -939,7 +971,13 @@ def update_contact(contact_id: str, linkedin_url: str = None, twitter_url: str =
 # ------------------------------------ Mentions/Notifications ------------------------------------#
 
 
-def get_all_mentioned_company_per_user(user_id: int, company_id: str, filter_type: str = None, offset: int = 0, limit: int = 10):
+def get_all_mentioned_company_per_user(
+    user_id: int,
+    company_id: str,
+    filter_type: str = None,
+    offset: int = 0,
+    limit: int = 10,
+):
     """Get all mentions for a company for a user."""
     # if offset == 0:
     #     seven_days_ago = timezone.now() - timedelta(days=7)
@@ -982,7 +1020,13 @@ def get_all_mentioned_company_per_user(user_id: int, company_id: str, filter_typ
     return pagination, result
 
 
-def get_mention_per_people(user_id: int, company_id: str, offset: int = 0, limit: int = 10, range_time: str = None):
+def get_mention_per_people(
+    user_id: int,
+    company_id: str,
+    offset: int = 0,
+    limit: int = 10,
+    range_time: str = None,
+):
     """Get mentions per people for a company."""
     seven_days_ago = timezone.make_aware(datetime(2024, 1, 1))
     if range_time == "SEVEN_DAYS":
@@ -997,9 +1041,9 @@ def get_mention_per_people(user_id: int, company_id: str, offset: int = 0, limit
     if not user_watchlist:
         return {"offset": offset, "limit": limit, "total_item": 0}, []
 
-    list_guest = LinkedinPersonalEmail.objects.filter(company__id=company_id).values_list(
-        "id", flat=True
-    )
+    list_guest = LinkedinPersonalEmail.objects.filter(
+        company__id=company_id
+    ).values_list("id", flat=True)
     guest = list(list_guest)
     guest_ids = [str(g).replace("-", "") for g in guest]
 
@@ -1038,7 +1082,13 @@ def get_mention_per_people(user_id: int, company_id: str, offset: int = 0, limit
     return pagination, result
 
 
-def get_all_mention(user_id: int, filter_type: str = None, offset: int = 0, limit: int = 10, mention_type: str = None):
+def get_all_mention(
+    user_id: int,
+    filter_type: str = None,
+    offset: int = 0,
+    limit: int = 10,
+    mention_type: str = None,
+):
     """Get all mentions across user's watchlist."""
     if offset == 0:
         seven_days_ago = timezone.now() - timedelta(days=7)
@@ -1126,7 +1176,9 @@ def get_all_mention(user_id: int, filter_type: str = None, offset: int = 0, limi
     return pagination, result
 
 
-def seen_all_mention(user_id: int, mention_type: str = None, filter_type: str = None) -> bool:
+def seen_all_mention(
+    user_id: int, mention_type: str = None, filter_type: str = None
+) -> bool:
     """Mark all mentions as seen."""
     list_company = UserWatchList.objects.filter(user_id=user_id).values_list(
         "company_id", flat=True
@@ -1248,14 +1300,16 @@ def get_detail_info_for_company(company_id: str) -> dict:
 
 def check_had_other_watchlist(current_user_id: int, watchlist_info: list) -> list:
     """Check if companies are in other watchlists."""
-    linkedin_pattern = r"^(https?:\/\/)?(www\.)?linkedin\.com\/(in|company)\/[\w\-@.&#]+\/?$"
-    
+    linkedin_pattern = (
+        r"^(https?:\/\/)?(www\.)?linkedin\.com\/(in|company)\/[\w\-@.&#]+\/?$"
+    )
+
     unique_rows = set()
     for item in watchlist_info:
         company_linkedin = item.get("company_linkedin")
         contact_linkedin = item.get("contact_linkedin")
         pair = (company_linkedin, contact_linkedin)
-        
+
         if pair in unique_rows:
             item["status"] = {
                 "status_code": 0,
@@ -1263,7 +1317,7 @@ def check_had_other_watchlist(current_user_id: int, watchlist_info: list) -> lis
             }
             continue
         unique_rows.add(pair)
-        
+
         # Validate LinkedIn URL
         if company_linkedin and not re.match(linkedin_pattern, company_linkedin):
             item["status"] = {
@@ -1271,13 +1325,19 @@ def check_had_other_watchlist(current_user_id: int, watchlist_info: list) -> lis
                 "message": "Invalid Company LinkedIn link. Use format: https://www.linkedin.com/company/company_name/",
             }
             continue
-        
+
         # Check if already in watchlist
-        company_linkedin_clean = company_linkedin.rstrip("/") if company_linkedin else ""
-        existing_company = LinkedinCompany.objects.filter(linkedin_url=company_linkedin_clean).first()
-        
+        company_linkedin_clean = (
+            company_linkedin.rstrip("/") if company_linkedin else ""
+        )
+        existing_company = LinkedinCompany.objects.filter(
+            linkedin_url=company_linkedin_clean
+        ).first()
+
         if existing_company:
-            existing_watchlist = UserWatchList.objects.filter(company_id=existing_company.id)
+            existing_watchlist = UserWatchList.objects.filter(
+                company_id=existing_company.id
+            )
             if existing_watchlist.exists():
                 if existing_watchlist.filter(user_id=current_user_id).exists():
                     item["status"] = {
@@ -1293,11 +1353,13 @@ def check_had_other_watchlist(current_user_id: int, watchlist_info: list) -> lis
                 item["status"] = {"status_code": 1, "message": "Valid"}
         else:
             item["status"] = {"status_code": 1, "message": "Valid"}
-            
+
     return watchlist_info
 
 
-def check_had_create_manual_watchlist(current_user_id: int, company_linkedin: str) -> dict:
+def check_had_create_manual_watchlist(
+    current_user_id: int, company_linkedin: str
+) -> dict:
     """Check if company LinkedIn URL is in user's or teammate's watchlist."""
     linkedin_pattern = r"^(https?:\/\/)?(www\.)?linkedin\.com\/company\/[\w\-@.&#]+\/?$"
     if not re.match(linkedin_pattern, company_linkedin):
@@ -1310,9 +1372,7 @@ def check_had_create_manual_watchlist(current_user_id: int, company_linkedin: st
     already_in_teammate_watchlist = False
 
     existing_company = (
-        LinkedinCompany.objects.filter(linkedin_url=company_linkedin)
-        .only("id")
-        .first()
+        LinkedinCompany.objects.filter(linkedin_url=company_linkedin).only("id").first()
     )
     if existing_company:
         existing_watchlist = UserWatchList.objects.filter(
@@ -1392,7 +1452,9 @@ def save_history_gen(user_id: int, completion_id: str, messages: list) -> bool:
     return True
 
 
-def get_all_completions(user_id: int, filter_field: str, obj_id: str, page: int = 1, limit: int = 10):
+def get_all_completions(
+    user_id: int, filter_field: str, obj_id: str, page: int = 1, limit: int = 10
+):
     """Get all AI completions for a company or contact."""
     user = Users.objects.filter(id=user_id).first()
     if not user:

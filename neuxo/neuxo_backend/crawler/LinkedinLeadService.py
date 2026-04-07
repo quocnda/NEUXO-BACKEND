@@ -1,19 +1,10 @@
-
 from __future__ import annotations
 
-import copy
-import re
 from typing import Any, ClassVar, Literal
 
-from apify_client import ApifyClient
 from django.db.models import Q
-from django.utils import timezone
-from django.utils.dateparse import parse_datetime
 
-from . import DEFAULT_MAP_ACTOR_TO_ID
-from neuxo_backend.models import (
-    LinkedinPersonalEmail
-)
+from neuxo_backend.models import LinkedinPersonalEmail
 from .BaseLinkedin import BaseLinkedin
 
 ActorName = Literal[
@@ -34,7 +25,9 @@ class LinkedinLeadService(BaseLinkedin):
         "contactEmailStatus": "verified",
     }
 
-    def run_get_leads_by_company_url(self, company_urls: list[str]) -> list[dict[str, Any]]:
+    def run_get_leads_by_company_url(
+        self, company_urls: list[str]
+    ) -> list[dict[str, Any]]:
         run_input = self._default_run_input()
         run_input["companyDomain"] = company_urls
         return self.run_actor(actor_name="LINKEDIN_GET_LEADS", run_input=run_input)
@@ -64,7 +57,9 @@ class LinkedinLeadService(BaseLinkedin):
         if company is not None:
             defaults["company"] = company
 
-        existing_person = LinkedinPersonalEmail.objects.filter(Q(linkedin_url=linkedin_url) | Q(linkedin_url=f"{linkedin_url}/")).first()
+        existing_person = LinkedinPersonalEmail.objects.filter(
+            Q(linkedin_url=linkedin_url) | Q(linkedin_url=f"{linkedin_url}/")
+        ).first()
 
         if existing_person:
             for field, value in defaults.items():
@@ -75,7 +70,9 @@ class LinkedinLeadService(BaseLinkedin):
             person = LinkedinPersonalEmail.objects.create(**defaults)
         return person
 
-    def run_get_leads_and_upsert_by_company_url(self, company_urls: list[str]) -> list[LinkedinPersonalEmail]:
+    def run_get_leads_and_upsert_by_company_url(
+        self, company_urls: list[str]
+    ) -> list[LinkedinPersonalEmail]:
         leads = self.run_get_leads_by_company_url(company_urls)
         persons: list[LinkedinPersonalEmail] = []
         for lead in leads:

@@ -359,11 +359,11 @@ CHANNEL_LAYERS = {
 
 
 CORS_ALLOWED_ORIGINS = [
-  "http://localhost:3001",
+    "http://localhost:3001",
 ]
 
 CORS_ALLOW_CREDENTIALS = True  # nếu login dùng cookie/session
 CORS_ALLOW_ALL_HEADERS = True
-CORS_ALLOW_METHODS = ["GET","POST","PUT","PATCH","DELETE","OPTIONS"]
+CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 
 APPEND_SLASH = False

@@ -1,7 +1,8 @@
 from django.core.management.base import BaseCommand
-from neuxo_backend.crawler.Subdomain import Subdomains
-from neuxo_backend.crawler.LinkedinProfileService import LinkedinProfileService
+
 from neuxo_backend.crawler.LinkedinJobServices import LinkedinJobService
+
+
 class Command(BaseCommand):
     help = "This is a placeholder command."
 
@@ -15,5 +16,7 @@ class Command(BaseCommand):
         #     "https://sg.linkedin.com/in/steven-bong-2042881a",
         #     "https://sg.linkedin.com/in/jacky-lee-22062169"
         # ])
-        data = LinkedinJobService().run_get_jobs_and_upsert_by_company_names(['listed-fans'])
-        print('data :',data)
+        data = LinkedinJobService().run_get_jobs_and_upsert_by_company_names(
+            ["listed-fans"]
+        )
+        print("data :", data)

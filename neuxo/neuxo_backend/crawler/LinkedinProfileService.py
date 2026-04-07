@@ -1,19 +1,10 @@
 from __future__ import annotations
 
-import copy
-import re
 from typing import Any, ClassVar, Literal
 
-from apify_client import ApifyClient
 from django.db.models import Q
-from django.utils import timezone
-from django.utils.dateparse import parse_datetime
 
-from . import DEFAULT_MAP_ACTOR_TO_ID
-from neuxo_backend.models import (
-    LinkedinPersonalEmail,
-    PersonalExperience
-)
+from neuxo_backend.models import LinkedinPersonalEmail, PersonalExperience
 from .BaseLinkedin import BaseLinkedin
 
 ActorName = Literal[
@@ -24,15 +15,21 @@ ActorName = Literal[
 ]
 
 
-
 class LinkedinProfileService(BaseLinkedin):
     ACTOR_NAME: ClassVar[ActorName] = "LINKEDIN_GET_PROFILE_PERSON"
-    DEFAULT_RUN_INPUT: ClassVar[dict[str, Any]] = {"query": [],'profileScraperMode' : "Profile details no email ($4 per 1k)"}
+    DEFAULT_RUN_INPUT: ClassVar[dict[str, Any]] = {
+        "query": [],
+        "profileScraperMode": "Profile details no email ($4 per 1k)",
+    }
 
-    def run_get_profile_person_by_query(self, queries: list[str]) -> list[dict[str, Any]]:
+    def run_get_profile_person_by_query(
+        self, queries: list[str]
+    ) -> list[dict[str, Any]]:
         run_input = self._default_run_input()
         run_input["query"] = queries
-        return self.run_actor(actor_name="LINKEDIN_GET_PROFILE_PERSON", run_input=run_input)
+        return self.run_actor(
+            actor_name="LINKEDIN_GET_PROFILE_PERSON", run_input=run_input
+        )
 
     def upsert_person_profile(self, profile: dict[str, Any]) -> LinkedinPersonalEmail:
         linkedin_url = self._normalize_url(str(profile.get("linkedinUrl") or ""))
@@ -44,9 +41,17 @@ class LinkedinProfileService(BaseLinkedin):
 
         current_company_linkedin_url = None
         if current_positions and isinstance(current_positions, list):
-            current_company_linkedin_url = self._safe_str((current_positions[0] or {}).get("companyLinkedinUrl"))
-        if not current_company_linkedin_url and experiences and isinstance(experiences, list):
-            current_company_linkedin_url = self._safe_str((experiences[0] or {}).get("companyLinkedinUrl"))
+            current_company_linkedin_url = self._safe_str(
+                (current_positions[0] or {}).get("companyLinkedinUrl")
+            )
+        if (
+            not current_company_linkedin_url
+            and experiences
+            and isinstance(experiences, list)
+        ):
+            current_company_linkedin_url = self._safe_str(
+                (experiences[0] or {}).get("companyLinkedinUrl")
+            )
 
         company = self._find_company(company_linkedin_url=current_company_linkedin_url)
 
@@ -55,19 +60,26 @@ class LinkedinProfileService(BaseLinkedin):
             "first_name": self._safe_str(profile.get("firstName"), 100),
             "last_name": self._safe_str(profile.get("lastName"), 100),
             "role": self._safe_str(profile.get("headline"), 200),
-            "avatar_linkedin_url": self._safe_str(self._dict_get(profile, ["profilePicture", "url"]) or profile.get("photo")),
+            "avatar_linkedin_url": self._safe_str(
+                self._dict_get(profile, ["profilePicture", "url"])
+                or profile.get("photo")
+            ),
             "about": self._safe_str(profile.get("about")),
             "education": profile.get("education") or [],
             "urn": self._safe_str(profile.get("objectUrn") or profile.get("id")),
             "is_update": 1,
         }
 
-        existing_person = LinkedinPersonalEmail.objects.filter(Q(linkedin_url=linkedin_url) | Q(linkedin_url=f"{linkedin_url}/")).first()
+        existing_person = LinkedinPersonalEmail.objects.filter(
+            Q(linkedin_url=linkedin_url) | Q(linkedin_url=f"{linkedin_url}/")
+        ).first()
 
         if existing_person and existing_person.email:
             defaults["email"] = existing_person.email
         else:
-            defaults["email"] = self._safe_str(profile.get("email"), 100) or "unknown@example.com"
+            defaults["email"] = (
+                self._safe_str(profile.get("email"), 100) or "unknown@example.com"
+            )
 
         if company is not None:
             defaults["company"] = company
@@ -84,9 +96,15 @@ class LinkedinProfileService(BaseLinkedin):
             if not isinstance(item, dict):
                 continue
 
-            start_text = self._safe_str(self._dict_get(item, ["startDate", "text"]), 100)
+            start_text = self._safe_str(
+                self._dict_get(item, ["startDate", "text"]), 100
+            )
             end_text = self._safe_str(self._dict_get(item, ["endDate", "text"]), 100)
-            time_period = self._safe_str(f"{start_text or ''} - {end_text or ''}".strip(" -") or item.get("duration"), 255)
+            time_period = self._safe_str(
+                f"{start_text or ''} - {end_text or ''}".strip(" -")
+                or item.get("duration"),
+                255,
+            )
 
             PersonalExperience.objects.update_or_create(
                 personal=person,
@@ -96,21 +114,31 @@ class LinkedinProfileService(BaseLinkedin):
                 company_name=self._safe_str(item.get("companyName")),
                 time_period=time_period,
                 defaults={
-                    "linkedin_company_logo": self._safe_str(self._dict_get(item, ["companyLogo", "url"])),
+                    "linkedin_company_logo": self._safe_str(
+                        self._dict_get(item, ["companyLogo", "url"])
+                    ),
                     "location": self._safe_str(item.get("location")),
                     "employment_type": self._safe_str(item.get("employmentType"), 100),
                     "workplace_type": self._safe_str(item.get("workplaceType"), 100),
                     "duration": self._safe_str(item.get("duration"), 100),
                     "description": self._safe_str(item.get("description")),
                     "start_date_text": start_text,
-                    "start_month": self._safe_str(self._dict_get(item, ["startDate", "month"]), 20),
+                    "start_month": self._safe_str(
+                        self._dict_get(item, ["startDate", "month"]), 20
+                    ),
                     "start_year": self._dict_get(item, ["startDate", "year"]),
                     "end_date_text": end_text,
-                    "end_month": self._safe_str(self._dict_get(item, ["endDate", "month"]), 20),
+                    "end_month": self._safe_str(
+                        self._dict_get(item, ["endDate", "month"]), 20
+                    ),
                     "end_year": self._dict_get(item, ["endDate", "year"]),
                     "is_current": (end_text or "").lower() == "present",
-                    "company_universal_name": self._safe_str(item.get("companyUniversalName"), 255),
-                    "experience_group_id": self._safe_str(item.get("experienceGroupId"), 255),
+                    "company_universal_name": self._safe_str(
+                        item.get("companyUniversalName"), 255
+                    ),
+                    "experience_group_id": self._safe_str(
+                        item.get("experienceGroupId"), 255
+                    ),
                     "source_profile_url": linkedin_url,
                     "raw_data": item,
                 },
@@ -118,11 +146,17 @@ class LinkedinProfileService(BaseLinkedin):
 
         return person
 
-    def run_get_profiles_and_upsert_by_query(self, person_urls: list[str]) -> list[LinkedinPersonalEmail]:
+    def run_get_profiles_and_upsert_by_query(
+        self, person_urls: list[str]
+    ) -> list[LinkedinPersonalEmail]:
         if not person_urls:
             return []
 
-        normalized_queries = [normalized_url for url in person_urls if (normalized_url := self._normalize_url(url))]
+        normalized_queries = [
+            normalized_url
+            for url in person_urls
+            if (normalized_url := self._normalize_url(url))
+        ]
         profiles = self.run_get_profile_person_by_query(normalized_queries)
 
         persons: list[LinkedinPersonalEmail] = []

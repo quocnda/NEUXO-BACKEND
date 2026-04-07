@@ -1447,7 +1447,9 @@ def getAllCompletionsForContact(request: HttpRequest, id) -> JsonResponse:
     user_id = request.user.get("id", None)
     _, _, page, limit = getParamsVer2(request)
 
-    pagination, data = get_all_completions(user_id, "person_contact_id", id, page, limit)
+    pagination, data = get_all_completions(
+        user_id, "person_contact_id", id, page, limit
+    )
 
     return JsonResponse(
         {

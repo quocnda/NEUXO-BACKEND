@@ -57,7 +57,11 @@ class Command(BaseCommand):
             raise CommandError("Active mail account not found.")
 
         if reset_cursor:
-            sent_candidates = ['"[Gmail]/Sent Mail"', '"[Google Mail]/Sent Mail"', "Sent"]
+            sent_candidates = [
+                '"[Gmail]/Sent Mail"',
+                '"[Google Mail]/Sent Mail"',
+                "Sent",
+            ]
             for folder_name in [INBOX_FOLDER, *sent_candidates]:
                 cache.delete(_message_cache_key(str(account.id), folder_name))
             self.stdout.write(

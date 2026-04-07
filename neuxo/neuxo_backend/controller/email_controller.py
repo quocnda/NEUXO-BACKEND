@@ -2,17 +2,15 @@
 Email Controller - Business Logic Layer
 Handles email-related business logic operations
 """
+
 from __future__ import annotations
 
-import operator
 import json
 import os
 import re
 import sqlite3
-from collections import defaultdict
 from datetime import datetime, timedelta
 from email.utils import parseaddr
-from functools import reduce
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -30,7 +28,6 @@ from django.utils import timezone
 import pytz
 import pandas as pd
 
-from neuxo_backend.controller.gen_email_controller import generate_email_for_campaign
 from neuxo_backend.models import (
     EmailHistoryNote,
     EmailTemplate,
@@ -103,11 +100,6 @@ def calculate_follow_up_date(
 
     if last_sent_date is None:
         return None
-
-    try:
-        tz = pytz.timezone(time_zone)
-    except pytz.exceptions.UnknownTimeZoneError:
-        tz = pytz.timezone("Asia/Saigon")
 
     # Calculate follow-up based on email count
     days_to_add = min(3 + (email_sent - 1) * 2, 14)
@@ -261,23 +253,21 @@ def _get_email_conversation_results(
 
     # Apply date range filter
     if last_activity_start_date and last_activity_end_date:
-        start_dt = datetime.strptime(last_activity_start_date.strip(), "%Y-%m-%d %H:%M:%S")
+        start_dt = datetime.strptime(
+            last_activity_start_date.strip(), "%Y-%m-%d %H:%M:%S"
+        )
         end_dt = datetime.strptime(last_activity_end_date.strip(), "%Y-%m-%d %H:%M:%S")
         lst_mail = lst_mail.filter(last_sent_date__range=[start_dt, end_dt])
 
     # Get note and priority data
-    all_note_priority = EmailHistoryNote.objects.filter(
-        user__id=user_id
-    ).values(
+    all_note_priority = EmailHistoryNote.objects.filter(user__id=user_id).values(
         "main_target_email",
         "user_note",
         "priority",
         "is_replied",
         "follow_up_date",
     )
-    note_priority_map = {
-        item["main_target_email"]: item for item in all_note_priority
-    }
+    note_priority_map = {item["main_target_email"]: item for item in all_note_priority}
 
     # Process results
     results = []
@@ -397,13 +387,17 @@ def get_tracking_email_conversations(
         filtered_results = []
         for item in results:
             is_unresponsive = False
-            if item["email_status"] == "SENT" and item["email_sent"] >= 3 and item["last_sent_date"]:
+            if (
+                item["email_status"] == "SENT"
+                and item["email_sent"] >= 3
+                and item["last_sent_date"]
+            ):
                 last_sent_date = datetime.strptime(
                     item["last_sent_date"], "%Y-%m-%d %H:%M:%S"
                 )
-                is_unresponsive = (
-                    last_sent_date <= today.replace(tzinfo=None) - timedelta(days=1)
-                )
+                is_unresponsive = last_sent_date <= today.replace(
+                    tzinfo=None
+                ) - timedelta(days=1)
             if item["email_status"] != "REPLIED" and not is_unresponsive:
                 filtered_results.append(item)
         results = filtered_results
@@ -530,7 +524,9 @@ def _extract_json_from_response(content: str) -> Dict[str, Any]:
     return json.loads(content)
 
 
-def _call_json_llm(system_prompt: str, user_prompt: str, temperature: float = 0.3) -> Dict[str, Any]:
+def _call_json_llm(
+    system_prompt: str, user_prompt: str, temperature: float = 0.3
+) -> Dict[str, Any]:
     client = _get_openai_client()
     response = client.chat.completions.create(
         model=DEFAULT_OPENAI_MODEL,
@@ -557,7 +553,9 @@ def _load_successful_projects_data() -> Dict[str, Any]:
                 "name": str(row.get("Project name", "") or "").strip(),
                 "keywords": str(row.get("Project keywords", "") or "").strip(),
                 "client": str(row.get("Client name", "") or "").strip(),
-                "client_description": str(row.get("Client description", "") or "").strip(),
+                "client_description": str(
+                    row.get("Client description", "") or ""
+                ).strip(),
                 "overview": str(row.get("Project overview", "") or "").strip(),
                 "key_points": str(row.get("Project key points", "") or "").strip(),
                 "ecosystem": str(row.get("Ecosystem", "") or "").strip(),
@@ -579,7 +577,9 @@ def _load_successful_projects_data() -> Dict[str, Any]:
     )
     countries = sorted({item["country"] for item in project_rows if item["country"]})
     categories = sorted({item["category"] for item in project_rows if item["category"]})
-    ecosystems = sorted({item["ecosystem"] for item in project_rows if item["ecosystem"]})
+    ecosystems = sorted(
+        {item["ecosystem"] for item in project_rows if item["ecosystem"]}
+    )
 
     return {
         "description": description,
@@ -612,7 +612,9 @@ def _load_spam_words() -> str:
     return ", ".join(spam_words)
 
 
-def _campaign_cache_get(sequence_id: str, company_id: str) -> Tuple[Optional[Dict], Optional[List[Dict]]]:
+def _campaign_cache_get(
+    sequence_id: str, company_id: str
+) -> Tuple[Optional[Dict], Optional[List[Dict]]]:
     CACHE_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(CACHE_DB_PATH)
     connection.row_factory = sqlite3.Row
@@ -680,13 +682,19 @@ def _campaign_cache_set(
     connection.close()
 
 
-def _get_sequence_trigger(company: Optional[LinkedinCompany], person: Optional[LinkedinPersonalEmail]) -> Dict[str, Any]:
-    notifications = list(
-        Notification.objects.filter(company=company, guest_id__isnull=True)
-        .exclude(type="SUB_DOMAIN")
-        .order_by("-time_post")[:20]
-        .values("title", "type", "post_url", "reference_id", "time_post")
-    ) if company else []
+def _get_sequence_trigger(
+    company: Optional[LinkedinCompany], person: Optional[LinkedinPersonalEmail]
+) -> Dict[str, Any]:
+    notifications = (
+        list(
+            Notification.objects.filter(company=company, guest_id__isnull=True)
+            .exclude(type="SUB_DOMAIN")
+            .order_by("-time_post")[:20]
+            .values("title", "type", "post_url", "reference_id", "time_post")
+        )
+        if company
+        else []
+    )
 
     if not notifications and person:
         notifications = list(
@@ -697,7 +705,12 @@ def _get_sequence_trigger(company: Optional[LinkedinCompany], person: Optional[L
         )
 
     if not notifications:
-        return {"type": "DEFAULT", "trigger_details": None, "title": "", "description": ""}
+        return {
+            "type": "DEFAULT",
+            "trigger_details": None,
+            "title": "",
+            "description": "",
+        }
 
     priority_map = {
         "JOB_CHANGE": 1,
@@ -748,7 +761,11 @@ def _company_profile_text(company: Optional[LinkedinCompany]) -> str:
     )
 
 
-def _person_profile_text(person: Optional[LinkedinPersonalEmail], guest: Optional[GuestList] = None, source: str = "COMPANY") -> str:
+def _person_profile_text(
+    person: Optional[LinkedinPersonalEmail],
+    guest: Optional[GuestList] = None,
+    source: str = "COMPANY",
+) -> str:
     if source == "EVENT":
         data = {
             "email": guest.email if guest else "",
@@ -775,8 +792,14 @@ def _classify_relevant_information_heuristic(
     company_industry = (company.industry or "").lower() if company else ""
     company_country = (company.country or "").lower() if company else ""
     company_category = (company.category or "").lower() if company else ""
-    company_labels = [str(label).lower() for label in (company.labels or [])] if company and company.labels else []
-    trigger_text = f"{trigger_dict.get('title', '')} {trigger_dict.get('description', '')}".lower()
+    company_labels = (
+        [str(label).lower() for label in (company.labels or [])]
+        if company and company.labels
+        else []
+    )
+    trigger_text = (
+        f"{trigger_dict.get('title', '')} {trigger_dict.get('description', '')}".lower()
+    )
 
     scored_rows = []
     for row in projects_data["rows"]:
@@ -803,7 +826,11 @@ def _classify_relevant_information_heuristic(
             score += 2
         if any(label in haystacks for label in company_labels):
             score += 3
-        if trigger_text and any(token for token in trigger_text.split() if len(token) > 4 and token in haystacks):
+        if trigger_text and any(
+            token
+            for token in trigger_text.split()
+            if len(token) > 4 and token in haystacks
+        ):
             score += 5
         if score > 0:
             scored_rows.append((score, row))
@@ -895,44 +922,50 @@ def _build_company_preview_prompt(
     if email_type == "manual_follow_up_1":
         subject = "are you the right contact?"
         content = (
-            f"Hey {recipient_name}," if recipient_name else "Hey,"
-        ) + "\n\nJust following up on my previous email.\n\nLet me know if you're the right person to discuss this. If not, I'd appreciate it if you could point me in the right direction.\n\nThanks and appreciate your support."
+            (f"Hey {recipient_name}," if recipient_name else "Hey,")
+            + "\n\nJust following up on my previous email.\n\nLet me know if you're the right person to discuss this. If not, I'd appreciate it if you could point me in the right direction.\n\nThanks and appreciate your support."
+        )
         return subject, content, ""
 
     if email_type == "manual_follow_up_fix_2":
         subject = "don't miss my last message"
         if trigger_group == "hiring":
             content = (
-                f"Hey {recipient_name}," if recipient_name else "Hey,"
-            ) + "\n\nHave you had a chance to view my earlier messages?\n\nIf the open engineering roles have already been filled or outsourcing is not a fit, feel free to let me know. Otherwise, I believe we could support your project with our blockchain and AI talent in the next 3-6 months."
+                (f"Hey {recipient_name}," if recipient_name else "Hey,")
+                + "\n\nHave you had a chance to view my earlier messages?\n\nIf the open engineering roles have already been filled or outsourcing is not a fit, feel free to let me know. Otherwise, I believe we could support your project with our blockchain and AI talent in the next 3-6 months."
+            )
         elif trigger_group in {"funding", "event"}:
             content = (
-                f"Hey {recipient_name}," if recipient_name else "Hey,"
-            ) + "\n\nHave you had a chance to view my earlier messages?\n\nIn case you missed it, feel free to reach me on Telegram @stephenta100m or we can set up a quick virtual coffee chat upfront if that is easier."
+                (f"Hey {recipient_name}," if recipient_name else "Hey,")
+                + "\n\nHave you had a chance to view my earlier messages?\n\nIn case you missed it, feel free to reach me on Telegram @stephenta100m or we can set up a quick virtual coffee chat upfront if that is easier."
+            )
         else:
             content = (
-                f"Hey {recipient_name}," if recipient_name else "Hey,"
-            ) + "\n\nI understand there can be concerns around quality, English communication, and time-zone overlap when it comes to outsourcing. At Varmeta we focus on strong engineering quality, clear communication, and dependable overlap with client time zones.\n\nHappy to jump on a quick intro call if helpful."
+                (f"Hey {recipient_name}," if recipient_name else "Hey,")
+                + "\n\nI understand there can be concerns around quality, English communication, and time-zone overlap when it comes to outsourcing. At Varmeta we focus on strong engineering quality, clear communication, and dependable overlap with client time zones.\n\nHappy to jump on a quick intro call if helpful."
+            )
         return subject, content, ""
 
     if email_type == "manual_follow_up_2":
         if trigger_group == "hiring":
             subject = "how to solve engineer crunch"
             content = (
-                f"Hey {recipient_name}," if recipient_name else "Hey,"
-            ) + f"\n\nWould like to check in on my last email. Your team's engineering push at {company_name or 'your company'} caught my attention. We've helped clients like 0G Labs, Aethir and Aptos ship dApps and AI agents quickly with our Vietnam engineering team.\n\nIf your firm is scaling fast, we could support with engineering capacity and speed up the rollout. Open to a quick chat next week?"
+                (f"Hey {recipient_name}," if recipient_name else "Hey,")
+                + f"\n\nWould like to check in on my last email. Your team's engineering push at {company_name or 'your company'} caught my attention. We've helped clients like 0G Labs, Aethir and Aptos ship dApps and AI agents quickly with our Vietnam engineering team.\n\nIf your firm is scaling fast, we could support with engineering capacity and speed up the rollout. Open to a quick chat next week?"
+            )
             return subject, content, ""
         if trigger_group == "funding":
             subject = "is your initiative still on track?"
             content = (
-                f"Hey {recipient_name}," if recipient_name else "Hey,"
-            ) + f"\n\nI appreciate the progress your team has made around fundraising at {company_name or 'your company'} so far. It also feels like your tech team may see growing demand for AI and software developers, which is why I wanted to reach out.\n\nWe do development work for Aptos, Hedera, Aethir and 0G Labs. Let me know if you would be open to a conversation."
+                (f"Hey {recipient_name}," if recipient_name else "Hey,")
+                + f"\n\nI appreciate the progress your team has made around fundraising at {company_name or 'your company'} so far. It also feels like your tech team may see growing demand for AI and software developers, which is why I wanted to reach out.\n\nWe do development work for Aptos, Hedera, Aethir and 0G Labs. Let me know if you would be open to a conversation."
+            )
             return subject, content, ""
 
     system_prompt = f"""
 You are a Sales Outreach Specialist generating personalized outreach emails.
 
-The client name is {recipient_name or 'unknown'} and the client company is {company_name or 'unknown company'}.
+The client name is {recipient_name or "unknown"} and the client company is {company_name or "unknown company"}.
 The sender is {sender_name} from Varmeta.
 The email type is {email_type}.
 The trigger group is {trigger_group}.
@@ -944,7 +977,7 @@ Person Profile:
 {person_profile}
 
 Trigger List:
-{trigger_text or '{}'}
+{trigger_text or "{}"}
 
 Relevant Information:
 {json.dumps(relevant_information, ensure_ascii=False)}
@@ -993,9 +1026,13 @@ Write a short follow-up email that keeps the tone friendly and concise.
 - Keep it actionable but non-pushy.
 """
 
-    return None, None, json.dumps(
-        {"system_prompt": system_prompt, "user_prompt": user_prompt},
-        ensure_ascii=False,
+    return (
+        None,
+        None,
+        json.dumps(
+            {"system_prompt": system_prompt, "user_prompt": user_prompt},
+            ensure_ascii=False,
+        ),
     )
 
 
@@ -1014,28 +1051,31 @@ def _build_event_preview_prompt(
     if email_type == "second_email":
         subject = "are you the right contact?"
         content = (
-            f"Hey {recipient_name}," if recipient_name else "Hey,"
-        ) + "\n\nJust following up on my previous email.\n\nLet me know if you're the right person to discuss this. If not, I'd appreciate it if you could point me to one of your colleagues who might be around the event to catch up.\n\nThanks and appreciate your help."
+            (f"Hey {recipient_name}," if recipient_name else "Hey,")
+            + "\n\nJust following up on my previous email.\n\nLet me know if you're the right person to discuss this. If not, I'd appreciate it if you could point me to one of your colleagues who might be around the event to catch up.\n\nThanks and appreciate your help."
+        )
         return subject, content, ""
 
     if email_type == "third_email":
         subject = f"connect at {event_name}"
         content = (
-            f"Hey {recipient_name}," if recipient_name else "Hey,"
-        ) + f"\n\nI'll drop by {event_name} this week and would love to catch up while we are both in town.\n\nIf you're open to sharing insights around the evolving web3 landscape, I'd be happy to grab coffee wherever is most convenient for you."
+            (f"Hey {recipient_name}," if recipient_name else "Hey,")
+            + f"\n\nI'll drop by {event_name} this week and would love to catch up while we are both in town.\n\nIf you're open to sharing insights around the evolving web3 landscape, I'd be happy to grab coffee wherever is most convenient for you."
+        )
         return subject, content, ""
 
     if email_type == "fourth_email":
         subject = "don't miss my last message"
         content = (
-            f"Hey {recipient_name}," if recipient_name else "Hey,"
-        ) + "\n\nHave you had a chance to view my earlier messages?\n\nIn case you missed them, feel free to reach me on Telegram @stephenta100m or we can set up a quick virtual coffee chat once the event rush settles down."
+            (f"Hey {recipient_name}," if recipient_name else "Hey,")
+            + "\n\nHave you had a chance to view my earlier messages?\n\nIn case you missed them, feel free to reach me on Telegram @stephenta100m or we can set up a quick virtual coffee chat once the event rush settles down."
+        )
         return subject, content, ""
 
     system_prompt = f"""
 You are a Sales Outreach Specialist generating personalized event outreach emails.
 The sender is {sender_name} from Varmeta.
-The recipient is {recipient_name or 'unknown'} from {company_name or 'unknown company'}.
+The recipient is {recipient_name or "unknown"} from {company_name or "unknown company"}.
 Main event: {event_name}
 Event dates: {event_dates}
 Event location: {event_location}
@@ -1062,13 +1102,19 @@ Write the first outreach email for an event attendee.
 - End with a soft invitation to exchange ideas.
 """
 
-    return None, None, json.dumps(
-        {"system_prompt": system_prompt, "user_prompt": user_prompt},
-        ensure_ascii=False,
+    return (
+        None,
+        None,
+        json.dumps(
+            {"system_prompt": system_prompt, "user_prompt": user_prompt},
+            ensure_ascii=False,
+        ),
     )
 
 
-def _evaluate_generated_email(content: str, expected_word_count: str, requirements: str, spam_words: str) -> Dict[str, Any]:
+def _evaluate_generated_email(
+    content: str, expected_word_count: str, requirements: str, spam_words: str
+) -> Dict[str, Any]:
     system_prompt = f"""
 You are a Professional Email Quality Evaluator.
 Return valid JSON with PART_1, PART_2, PART_3, COMMENT.
@@ -1098,13 +1144,19 @@ def _generate_preview_content(
     signature = sequence.signature
     separator = "<br>----<br>"
     sender_name = _get_sender_display_name(user)
-    context = _resolve_preview_recipient_context(recipient_email, source, event_id=event_id)
+    context = _resolve_preview_recipient_context(
+        recipient_email, source, event_id=event_id
+    )
     projects_data = _load_successful_projects_data()
     testimonial_text = _load_testimonial_description()
     spam_words = _load_spam_words()
 
     if source == "EVENT":
-        guest = GuestList.objects.filter(email__iexact=recipient_email).select_related("company", "event").first()
+        guest = (
+            GuestList.objects.filter(email__iexact=recipient_email)
+            .select_related("company", "event")
+            .first()
+        )
         event = EventsList.objects.filter(id=event_id or sequence.event_id).first()
         list_events = list(
             GuestList.objects.filter(email__iexact=recipient_email, event__isnull=False)
@@ -1127,7 +1179,9 @@ def _generate_preview_content(
             company_profile=_company_profile_text(guest.company if guest else None),
             person_profile=_person_profile_text(None, guest=guest, source="EVENT"),
             event_name=event.name if event else "",
-            event_dates=event.start_date.strftime("%Y-%m-%d") if event and event.start_date else "",
+            event_dates=event.start_date.strftime("%Y-%m-%d")
+            if event and event.start_date
+            else "",
             event_location=event.location if event else "",
             list_events=list_events,
         )
@@ -1139,10 +1193,18 @@ def _generate_preview_content(
             )
             subject = str(answer.get("Subject", "")).strip()
             content = str(answer.get("Content", "")).strip()
-        html_content = content.replace("\n", "<br>") + separator + (signature.signature_html if signature else "")
+        html_content = (
+            content.replace("\n", "<br>")
+            + separator
+            + (signature.signature_html if signature else "")
+        )
         return subject, html_content, prompt_email
 
-    person = LinkedinPersonalEmail.objects.filter(email__iexact=recipient_email).select_related("company").first()
+    person = (
+        LinkedinPersonalEmail.objects.filter(email__iexact=recipient_email)
+        .select_related("company")
+        .first()
+    )
     company = person.company if person else None
     email_type = {
         1: "first-email",
@@ -1154,7 +1216,9 @@ def _generate_preview_content(
 
     trigger_dict, relevant_information = (None, None)
     if company:
-        trigger_dict, relevant_information = _campaign_cache_get(str(sequence.id), str(company.id))
+        trigger_dict, relevant_information = _campaign_cache_get(
+            str(sequence.id), str(company.id)
+        )
     if not trigger_dict or not relevant_information:
         trigger_dict = _get_sequence_trigger(company, person)
         relevant_information = _classify_relevant_information_heuristic(
@@ -1164,21 +1228,32 @@ def _generate_preview_content(
             projects_data=projects_data,
         )
         if company:
-            _campaign_cache_set(str(sequence.id), str(company.id), trigger_dict, relevant_information)
+            _campaign_cache_set(
+                str(sequence.id), str(company.id), trigger_dict, relevant_information
+            )
 
     trigger_group = str(trigger_dict.get("type", "DEFAULT")).lower()
     if trigger_group not in {"hiring", "funding", "event"}:
         trigger_group = "default"
 
     previous_context = ""
-    if MailHistory.objects.filter(main_target_mail=recipient_email, type="RECIEVE").exists() or MailHistory.objects.filter(main_target_mail=recipient_email, type="SEND").exists():
+    if (
+        MailHistory.objects.filter(
+            main_target_mail=recipient_email, type="RECIEVE"
+        ).exists()
+        or MailHistory.objects.filter(
+            main_target_mail=recipient_email, type="SEND"
+        ).exists()
+    ):
         previous_context = json.dumps(
             [
                 {
                     "email_send": item.content or "",
                     "email_reply": "",
                 }
-                for item in MailHistory.objects.filter(main_target_mail=recipient_email, type="SEND").order_by("-time_send")[:3]
+                for item in MailHistory.objects.filter(
+                    main_target_mail=recipient_email, type="SEND"
+                ).order_by("-time_send")[:3]
             ],
             ensure_ascii=False,
         )
@@ -1220,7 +1295,9 @@ def _generate_preview_content(
             )
             evaluation = _evaluate_generated_email(
                 content=content,
-                expected_word_count="100-125 words, maximum 125 words" if email_type == "first-email" else "Maximum 100 words",
+                expected_word_count="100-125 words, maximum 125 words"
+                if email_type == "first-email"
+                else "Maximum 100 words",
                 requirements="Keep the tone simple, natural, concise and non-pushy.",
                 spam_words=spam_words,
             )
@@ -1233,7 +1310,11 @@ def _generate_preview_content(
             previous_email = content
         prompt_email = generated_prompt
 
-    html_content = content.replace("\n", "<br>") + separator + (signature.signature_html if signature else "")
+    html_content = (
+        content.replace("\n", "<br>")
+        + separator
+        + (signature.signature_html if signature else "")
+    )
     return subject, html_content, prompt_email
 
 
@@ -1276,14 +1357,19 @@ def _resolve_preview_recipient_context(
             ),
         }
 
-    person = LinkedinPersonalEmail.objects.filter(email__iexact=recipient_email).select_related(
-        "company"
-    ).first()
+    person = (
+        LinkedinPersonalEmail.objects.filter(email__iexact=recipient_email)
+        .select_related("company")
+        .first()
+    )
 
     if person:
-        recipient_name = " ".join(
-            [part for part in [person.first_name, person.last_name] if part]
-        ).strip() or recipient_email.split("@")[0]
+        recipient_name = (
+            " ".join(
+                [part for part in [person.first_name, person.last_name] if part]
+            ).strip()
+            or recipient_email.split("@")[0]
+        )
         return {
             "recipient_name": recipient_name,
             "company_name": person.company.name if person.company else None,
@@ -1319,7 +1405,9 @@ def create_sequence_email_record(
     if not user:
         raise ValueError("User not found")
 
-    mail_user_account = MailAppAccount.objects.filter(user_id=user_id, status="ACTIVE").first()
+    mail_user_account = MailAppAccount.objects.filter(
+        user_id=user_id, status="ACTIVE"
+    ).first()
     if mail_user_account is None:
         raise ValueError("Mail account not found")
 
@@ -1361,7 +1449,9 @@ def create_sequence_email_record(
     current_follow_up_date = date_now
 
     for index, step_offset_days in enumerate(normalized_steps):
-        current_follow_up_date = current_follow_up_date + timedelta(days=step_offset_days)
+        current_follow_up_date = current_follow_up_date + timedelta(
+            days=step_offset_days
+        )
         sequence_steps.append(
             {
                 "step_number": index + 1,
@@ -1369,9 +1459,7 @@ def create_sequence_email_record(
             }
         )
 
-    sequence_name = (
-        f"Sequence_{timezone.now().strftime('%Y%m%d%H%M%S')}_User_{user.user_name or user.id}"
-    )
+    sequence_name = f"Sequence_{timezone.now().strftime('%Y%m%d%H%M%S')}_User_{user.user_name or user.id}"
     total_days = sum(normalized_steps)
     day_start_bimonthly = timezone.now() + timedelta(days=total_days)
 
@@ -1415,7 +1503,9 @@ def preview_sequence_email(
     if not _is_valid_email(email):
         raise ValueError("Invalid email")
 
-    sequence_email = SequenceEmail.objects.filter(id=sequence_id, user_id=user_id).first()
+    sequence_email = SequenceEmail.objects.filter(
+        id=sequence_id, user_id=user_id
+    ).first()
     if sequence_email is None:
         raise ValueError("Sequence not found")
 
@@ -1434,7 +1524,9 @@ def preview_sequence_email(
         .order_by("step_number")
     )
     if cached_rows:
-        failed_item = next((item for item in cached_rows if item["status"] == "FAILED"), None)
+        failed_item = next(
+            (item for item in cached_rows if item["status"] == "FAILED"), None
+        )
         if failed_item:
             raise ValueError(failed_item["content"] or "Preview generation failed")
 
@@ -1498,21 +1590,30 @@ def ensure_sequence_step_content_generated(
     persist_step_history: bool = False,
 ) -> List[SequenceEmailStepHistory]:
     """Generate MailGenHistory content and optionally create step histories."""
-    sequence = SequenceEmail.objects.select_related("signature", "user").filter(id=sequence_id).first()
+    sequence = (
+        SequenceEmail.objects.select_related("signature", "user")
+        .filter(id=sequence_id)
+        .first()
+    )
     if not sequence:
         raise ValueError("Sequence not found")
 
-    owner = user or sequence.user
     source_value = _normalize_sequence_source(source or sequence.source)
     step_map = {
         str(step.id): step
-        for step in SequenceEmailStep.objects.filter(sequence=sequence, id__in=step_ids).order_by("step_number")
+        for step in SequenceEmailStep.objects.filter(
+            sequence=sequence, id__in=step_ids
+        ).order_by("step_number")
     }
     if not step_map:
         return []
 
-    sender_account = MailAppAccount.objects.filter(user=sequence.user, status="ACTIVE").first()
-    sender_email = sender_account.email if sender_account else (sequence.user.email or "")
+    sender_account = MailAppAccount.objects.filter(
+        user=sequence.user, status="ACTIVE"
+    ).first()
+    sender_email = (
+        sender_account.email if sender_account else (sequence.user.email or "")
+    )
     created_step_histories: List[SequenceEmailStepHistory] = []
 
     normalized_recipients = list(
@@ -1585,7 +1686,9 @@ def ensure_sequence_step_content_generated(
                     step_history.email_sender = sender_email
                     step_history.subject = generated.subject or step_history.subject
                     step_history.content = generated.content or step_history.content
-                    step_history.email_prompt = generated.email_prompt or step_history.email_prompt
+                    step_history.email_prompt = (
+                        generated.email_prompt or step_history.email_prompt
+                    )
                     step_history.save(
                         update_fields=[
                             "email_sender",
@@ -1607,9 +1710,11 @@ def submit_sequence_email(
     event_id: Optional[str] = None,
 ) -> Dict[str, str]:
     """Persist submitted sequence content and mark the sequence as processing."""
-    sequence = SequenceEmail.objects.select_related("signature", "user").filter(
-        id=sequence_id, user_id=user_id
-    ).first()
+    sequence = (
+        SequenceEmail.objects.select_related("signature", "user")
+        .filter(id=sequence_id, user_id=user_id)
+        .first()
+    )
     if not sequence:
         raise ValueError("Sequence not found")
 
@@ -1618,7 +1723,9 @@ def submit_sequence_email(
 
     steps = {
         step.step_number: step
-        for step in SequenceEmailStep.objects.filter(sequence__id=sequence_id).order_by("step_number")
+        for step in SequenceEmailStep.objects.filter(sequence__id=sequence_id).order_by(
+            "step_number"
+        )
     }
     if not steps:
         raise ValueError("Sequence step not found")
@@ -1831,17 +1938,19 @@ def get_signatures(user_id: int) -> List[Dict]:
         "created_at",
         "updated_at",
     )
-    return { "list_signatures": [
-        {
-            "id": str(s["id"]),
-            "signature_name": s["signature_name"],
-            "signature_html": s["signature_html"],
-            "email": s["user_gmail__email"],
-            "created_at": s["created_at"],
-            "updated_at": s["updated_at"],
-        }
-        for s in signatures
-    ]}
+    return {
+        "list_signatures": [
+            {
+                "id": str(s["id"]),
+                "signature_name": s["signature_name"],
+                "signature_html": s["signature_html"],
+                "email": s["user_gmail__email"],
+                "created_at": s["created_at"],
+                "updated_at": s["updated_at"],
+            }
+            for s in signatures
+        ]
+    }
 
 
 def create_or_update_signature(

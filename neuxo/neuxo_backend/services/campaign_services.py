@@ -2,6 +2,7 @@
 Campaign Services - HTTP Handler Layer
 Handles email campaign/sequence related API endpoints
 """
+
 from __future__ import annotations
 
 import traceback
@@ -16,7 +17,6 @@ from rest_framework.status import (
     HTTP_400_BAD_REQUEST,
     HTTP_405_METHOD_NOT_ALLOWED,
 )
-
 from neuxo_backend.controller.campaign_controller import (
     edit_campaign_name,
     get_campaign_about,
@@ -265,7 +265,7 @@ def getAllEmailStaticByAdmin(request: HttpRequest) -> JsonResponse:
 
     try:
         from neuxo_backend.models import MailHistory, SequenceEmail
-        from django.db.models import Count, Sum
+        from django.db.models import Count, Q
 
         # Get overall statistics
         total_campaigns = SequenceEmail.objects.exclude(
@@ -273,8 +273,8 @@ def getAllEmailStaticByAdmin(request: HttpRequest) -> JsonResponse:
         ).count()
 
         email_stats = MailHistory.objects.aggregate(
-            total_sent=Count("id", filter=models.Q(type="SEND")),
-            total_received=Count("id", filter=models.Q(type="RECIEVE")),
+            total_sent=Count("id", filter=Q(type="SEND")),
+            total_received=Count("id", filter=Q(type="RECIEVE")),
         )
 
         result = {

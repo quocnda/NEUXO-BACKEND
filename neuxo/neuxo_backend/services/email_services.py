@@ -2,17 +2,15 @@
 Email Services - HTTP Handler Layer
 Handles email-related API endpoints
 """
+
 from __future__ import annotations
 
 import imaplib
-import os
 import traceback
-from datetime import datetime
-from uuid import uuid4
+
 
 from django.db import transaction
 from django.http import HttpRequest, JsonResponse
-from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.decorators import api_view
@@ -45,7 +43,6 @@ from neuxo_backend.tasks import enqueue_mail_account_crawl, enqueue_sequence_pro
 from neuxo_backend.services.utils import (
     PARAMETERS,
     PARAMETERS_EMAIL,
-    getParams,
     getUserID,
 )
 from users.utils.crypto_hash import encrypt_password
@@ -97,9 +94,7 @@ def saveEmailAccount(request: HttpRequest) -> JsonResponse:
         user_id = getUserID(request)
 
         # Check if account already exists
-        existing = MailAppAccount.objects.filter(
-            user__id=user_id, email=email
-        ).first()
+        existing = MailAppAccount.objects.filter(user__id=user_id, email=email).first()
         if existing:
             return JsonResponse(
                 {"message": "Email account already exists"},
@@ -126,9 +121,7 @@ def saveEmailAccount(request: HttpRequest) -> JsonResponse:
             user_id=user_id,
         )
 
-        transaction.on_commit(
-            lambda: enqueue_mail_account_crawl.delay(str(account.id))
-        )
+        transaction.on_commit(lambda: enqueue_mail_account_crawl.delay(str(account.id)))
 
         return JsonResponse(
             {
@@ -281,7 +274,10 @@ def getListEmailTracking(request: HttpRequest) -> JsonResponse:
                 "list_email": {"type": "array", "items": {"type": "string"}},
                 "custom_sequence": {"type": "array", "items": {"type": "integer"}},
                 "campaign_name": {"type": "string"},
-                "source": {"type": "string", "enum": ["company", "event", "COMPANY", "EVENT"]},
+                "source": {
+                    "type": "string",
+                    "enum": ["company", "event", "COMPANY", "EVENT"],
+                },
                 "enable_bimonthly": {"type": "boolean"},
                 "max_email_bimonthly": {"type": "integer"},
                 "user_hot_trigger": {"type": "boolean"},
@@ -338,10 +334,18 @@ def createSequenceEmail(request: HttpRequest) -> JsonResponse:
 
 @extend_schema(
     parameters=[
-        OpenApiParameter(name="email", description="Recipient email", type=str, required=True),
-        OpenApiParameter(name="sequence_id", description="Sequence ID", type=str, required=True),
-        OpenApiParameter(name="source", description="Source type", type=str, required=False),
-        OpenApiParameter(name="event_id", description="Event ID", type=str, required=False),
+        OpenApiParameter(
+            name="email", description="Recipient email", type=str, required=True
+        ),
+        OpenApiParameter(
+            name="sequence_id", description="Sequence ID", type=str, required=True
+        ),
+        OpenApiParameter(
+            name="source", description="Source type", type=str, required=False
+        ),
+        OpenApiParameter(
+            name="event_id", description="Event ID", type=str, required=False
+        ),
     ],
     responses={"200": "Success"},
     auth=None,
@@ -487,20 +491,26 @@ def getEmailTemplateById(request: HttpRequest, id: str) -> JsonResponse:
         user_id = getUserID(request)
         from neuxo_backend.models import EmailTemplate
 
-        template = EmailTemplate.objects.filter(id=id, user__id=user_id).values(
-            "id",
-            "template_name",
-            "template_subject",
-            "template_content",
-            "attachments",
-        ).first()
+        template = (
+            EmailTemplate.objects.filter(id=id, user__id=user_id)
+            .values(
+                "id",
+                "template_name",
+                "template_subject",
+                "template_content",
+                "attachments",
+            )
+            .first()
+        )
 
         if not template:
             return JsonResponse(
                 {"message": "Template not found"}, status=HTTP_400_BAD_REQUEST
             )
 
-        return JsonResponse({"message": "Success", "data": template}, status=HTTP_200_OK)
+        return JsonResponse(
+            {"message": "Success", "data": template}, status=HTTP_200_OK
+        )
 
     except Exception as e:
         traceback.print_exc()
@@ -546,7 +556,9 @@ def createEmailTemplate(request: HttpRequest) -> JsonResponse:
 
         if not template_name or not template_subject or not template_content:
             return JsonResponse(
-                {"message": "template_name, template_subject, and template_content are required"},
+                {
+                    "message": "template_name, template_subject, and template_content are required"
+                },
                 status=HTTP_400_BAD_REQUEST,
             )
 
@@ -743,7 +755,9 @@ def putSignatureMail(request: HttpRequest) -> JsonResponse:
 
         if not result:
             return JsonResponse(
-                {"message": "Failed to create/update signature. No email account found."},
+                {
+                    "message": "Failed to create/update signature. No email account found."
+                },
                 status=HTTP_400_BAD_REQUEST,
             )
 
@@ -835,7 +849,7 @@ def updateRecord(request: HttpRequest) -> JsonResponse:
         note = data.get("note")
         priority = data.get("priority")
 
-        success = update_email_record(
+        update_email_record(
             user_id=user_id, target_email=target_email, note=note, priority=priority
         )
 
@@ -885,7 +899,7 @@ def setFollowUpDateForReplied(request: HttpRequest) -> JsonResponse:
             )
 
         follow_up_date = data.get("follow_up_date")
-        success = set_follow_up_date(
+        set_follow_up_date(
             user_id=user_id, target_email=target_email, follow_up_date=follow_up_date
         )
 
@@ -969,9 +983,7 @@ def submitSequenceEmail(request: HttpRequest) -> JsonResponse:
             event_id=data.get("event_id"),
         )
 
-        transaction.on_commit(
-            lambda: enqueue_sequence_processing.delay(sequence_id)
-        )
+        transaction.on_commit(lambda: enqueue_sequence_processing.delay(sequence_id))
 
         return JsonResponse(result, status=HTTP_200_OK)
 

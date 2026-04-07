@@ -177,12 +177,16 @@ def _build_mail_history_payload(
     is_sent = any(addr == account_email for addr in from_addresses)
 
     if is_sent:
-        main_target_mail = next((addr for addr in to_addresses if addr != account_email), "")
+        main_target_mail = next(
+            (addr for addr in to_addresses if addr != account_email), ""
+        )
         mail_type = "SEND"
         mail_send = account_email
         mail_received = ", ".join(to_addresses)
     else:
-        main_target_mail = next((addr for addr in from_addresses if addr != account_email), "")
+        main_target_mail = next(
+            (addr for addr in from_addresses if addr != account_email), ""
+        )
         mail_type = "RECIEVE"
         mail_send = ", ".join(from_addresses)
         mail_received = ", ".join(to_addresses) or account_email
@@ -191,7 +195,9 @@ def _build_mail_history_payload(
         combined = to_addresses if is_sent else from_addresses
         main_target_mail = next((addr for addr in combined if addr), "")
 
-    durable_message_id = message_id or f"{folder_name}:{uid.decode(errors='ignore')}:{account.id}"
+    durable_message_id = (
+        message_id or f"{folder_name}:{uid.decode(errors='ignore')}:{account.id}"
+    )
     first_reference = ""
     if references:
         first_reference = references.split()[0].strip()
@@ -247,7 +253,9 @@ def _process_folder_batch(
 ) -> tuple[int, bool]:
     status, _ = mail.select(folder_name, readonly=True)
     if status != "OK":
-        logger.warning("Unable to select folder %s for account %s", folder_name, account.id)
+        logger.warning(
+            "Unable to select folder %s for account %s", folder_name, account.id
+        )
         return cursor, False
 
     status, data = mail.search(None, "ALL")
@@ -360,7 +368,11 @@ def _crawl_latest_inbox_messages(
 
         status, _ = mail.select(INBOX_FOLDER, readonly=True)
         if status != "OK":
-            return {"processed_count": 0, "error_count": 0, "reason": "inbox_unavailable"}
+            return {
+                "processed_count": 0,
+                "error_count": 0,
+                "reason": "inbox_unavailable",
+            }
 
         status, data = mail.search(None, "ALL")
         if status != "OK":
@@ -431,7 +443,9 @@ def crawl_mail_account_task(self, account_id: str) -> dict:
 
     lock_key = _lock_key(account_id)
     task_identifier = getattr(self.request, "id", None) or f"manual-{account_id}"
-    if not cache.add(lock_key, task_identifier, timeout=settings.CELERY_TASK_TIME_LIMIT):
+    if not cache.add(
+        lock_key, task_identifier, timeout=settings.CELERY_TASK_TIME_LIMIT
+    ):
         return {"status": "skipped", "reason": "already_running"}
 
     account_email = (account.email or "").lower().strip()
@@ -443,7 +457,11 @@ def crawl_mail_account_task(self, account_id: str) -> dict:
         mail.login(account_email, password)
 
         batch_size = settings.CELERY_EMAIL_CRAWL_BATCH_SIZE
-        print('Starting email crawl for account %s with batch size %d', account_email, batch_size)
+        print(
+            "Starting email crawl for account %s with batch size %d",
+            account_email,
+            batch_size,
+        )
         sent_folder = _discover_sent_folder(mail)
         print(f"Discovered sent folder for account {account_email}: {sent_folder}")
         sent_cursor_key = _message_cache_key(account_id, sent_folder)
@@ -451,8 +469,10 @@ def crawl_mail_account_task(self, account_id: str) -> dict:
 
         sent_cursor = int(cache.get(sent_cursor_key) or 0)
         inbox_cursor = int(cache.get(inbox_cursor_key) or 0)
-        print(f"Starting crawl for account {account_email} with sent_cursor={sent_cursor}, inbox_cursor={inbox_cursor}")
-        
+        print(
+            f"Starting crawl for account {account_email} with sent_cursor={sent_cursor}, inbox_cursor={inbox_cursor}"
+        )
+
         sent_cursor, sent_has_more = _process_folder_batch(
             mail=mail,
             account=account,
@@ -482,7 +502,12 @@ def crawl_mail_account_task(self, account_id: str) -> dict:
         _set_task_state(account_id, state)
 
         if sent_has_more or inbox_has_more:
-            print('Batch completed for account %s, scheduling next batch with sent_cursor=%d, inbox_cursor=%d', account_email, sent_cursor, inbox_cursor)
+            print(
+                "Batch completed for account %s, scheduling next batch with sent_cursor=%d, inbox_cursor=%d",
+                account_email,
+                sent_cursor,
+                inbox_cursor,
+            )
             crawl_mail_account_task.apply_async(
                 args=[account_id],
                 countdown=settings.CELERY_EMAIL_CRAWL_COUNTDOWN,
@@ -496,7 +521,9 @@ def crawl_mail_account_task(self, account_id: str) -> dict:
             try:
                 mail.logout()
             except Exception:
-                logger.exception("Failed to logout IMAP session for account %s", account_id)
+                logger.exception(
+                    "Failed to logout IMAP session for account %s", account_id
+                )
         cache.delete(lock_key)
 
 
@@ -727,7 +754,9 @@ def _send_sequence_email(
         with smtplib.SMTP("smtp.gmail.com", 587, timeout=40) as server:
             server.starttls()
             server.login(account.email, password)
-            server.sendmail(account.email, [step_history.email_target], message.as_string())
+            server.sendmail(
+                account.email, [step_history.email_target], message.as_string()
+            )
 
         mail_history = MailHistory.objects.create(
             user_id=sequence.user_id,
@@ -797,7 +826,11 @@ def _finalize_sequence_state(sequence: SequenceEmail) -> None:
         )
         return
 
-    eta = next_step.follow_up_date if next_step.follow_up_date and next_step.follow_up_date > timezone.now() else None
+    eta = (
+        next_step.follow_up_date
+        if next_step.follow_up_date and next_step.follow_up_date > timezone.now()
+        else None
+    )
     if eta:
         process_sequence_task.apply_async(args=[str(sequence.id)], eta=eta)
     else:
@@ -825,11 +858,15 @@ def process_sequence_task(self, sequence_id: str) -> dict:
 
     lock_key = _sequence_lock_key(sequence_id)
     task_identifier = getattr(self.request, "id", None) or f"manual-{sequence_id}"
-    if not cache.add(lock_key, task_identifier, timeout=settings.CELERY_TASK_TIME_LIMIT):
+    if not cache.add(
+        lock_key, task_identifier, timeout=settings.CELERY_TASK_TIME_LIMIT
+    ):
         return {"status": "skipped", "reason": "already_running"}
 
     try:
-        account = MailAppAccount.objects.filter(user=sequence.user, status="ACTIVE").first()
+        account = MailAppAccount.objects.filter(
+            user=sequence.user, status="ACTIVE"
+        ).first()
         if not account:
             return {"status": "skipped", "reason": "mail_account_not_found"}
 
@@ -848,7 +885,9 @@ def process_sequence_task(self, sequence_id: str) -> dict:
 
         sent_count = 0
         for step in due_steps:
-            final_targets, completed_early = _prepare_sequence_step_histories(sequence, step)
+            final_targets, completed_early = _prepare_sequence_step_histories(
+                sequence, step
+            )
             if completed_early:
                 continue
 
@@ -892,7 +931,11 @@ def process_sequence_task(self, sequence_id: str) -> dict:
                 countdown=3 * 60,
             )
 
-        return {"status": "processed", "sequence_id": sequence_id, "sent_count": sent_count}
+        return {
+            "status": "processed",
+            "sequence_id": sequence_id,
+            "sent_count": sent_count,
+        }
     finally:
         cache.delete(lock_key)
 

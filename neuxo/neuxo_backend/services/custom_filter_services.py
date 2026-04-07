@@ -2,6 +2,7 @@
 Custom Filter Services - HTTP Handler Layer
 Handles custom filter related API endpoints
 """
+
 from __future__ import annotations
 
 import traceback
@@ -48,9 +49,7 @@ def getCustomFilters(request: HttpRequest) -> JsonResponse:
         user_id = getUserID(request)
         filters = get_custom_filters(user_id)
 
-        return JsonResponse(
-            {"message": "Success", "data": filters}, status=HTTP_200_OK
-        )
+        return JsonResponse({"message": "Success", "data": filters}, status=HTTP_200_OK)
 
     except Exception as e:
         traceback.print_exc()

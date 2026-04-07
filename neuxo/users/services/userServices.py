@@ -383,6 +383,7 @@ def userInfo(request):
             )
         except Exception:
             import traceback
+
             traceback.print_exc()
             return JsonResponse(
                 {"message": "Get user information Unsuccessfully"},

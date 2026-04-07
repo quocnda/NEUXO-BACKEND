@@ -48,8 +48,9 @@ urlpatterns = [
         company_services.getColumnField,
         name="get_column_field",
     ),
-    path("companies/<str:id>", company_services.getCompanyById, name="get_company_by_id"),
-    
+    path(
+        "companies/<str:id>", company_services.getCompanyById, name="get_company_by_id"
+    ),
     # Blacklist
     path(
         "matching-companies/addBlackList",

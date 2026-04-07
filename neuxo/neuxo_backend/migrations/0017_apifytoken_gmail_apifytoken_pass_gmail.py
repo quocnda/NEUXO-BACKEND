@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('neuxo_backend', '0016_mentionslinkedin_enrichment_fields'),
+        ("neuxo_backend", "0016_mentionslinkedin_enrichment_fields"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='apifytoken',
-            name='gmail',
+            model_name="apifytoken",
+            name="gmail",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='apifytoken',
-            name='pass_gmail',
+            model_name="apifytoken",
+            name="pass_gmail",
             field=models.TextField(blank=True, null=True),
         ),
     ]

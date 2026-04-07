@@ -2,6 +2,7 @@
 Tracker Services - HTTP Handler Layer
 Handles email tracking related API endpoints
 """
+
 from __future__ import annotations
 
 import json
@@ -65,9 +66,9 @@ def is_real_email_open(ip_str: str, user_agent: str) -> bool:
 
 # 1x1 transparent PNG pixel
 TRANSPARENT_PIXEL = (
-    b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01'
-    b'\x08\x04\x00\x00\x00\xb5\x1c\x0c\x02\x00\x00\x00\x0bIDATx\xdac\xfa'
-    b'\x0f\x00\x01\x05\x01\x02\xcf\xa0.\xcd\x00\x00\x00\x00IEND\xaeB`\x82'
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x04\x00\x00\x00\xb5\x1c\x0c\x02\x00\x00\x00\x0bIDATx\xdac\xfa"
+    b"\x0f\x00\x01\x05\x01\x02\xcf\xa0.\xcd\x00\x00\x00\x00IEND\xaeB`\x82"
 )
 
 
@@ -188,11 +189,11 @@ def email_tracking_pixel(request: HttpRequest, tracking_id: str) -> HttpResponse
 def email_tracking_stats(request: HttpRequest) -> JsonResponse:
     """Get email tracking statistics"""
     try:
-        from django.db.models import Count, Sum
+        from django.db.models import Count, Sum, Q
 
         stats = EmailTracker.objects.aggregate(
             total_tracked=Count("id"),
-            total_opened=Count("id", filter=models.Q(opened=True)),
+            total_opened=Count("id", filter=Q(opened=True)),
             total_opens=Sum("opened_count"),
         )
 

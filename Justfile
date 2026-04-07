@@ -16,16 +16,17 @@ default:
 # [group('Manage dependencies')]
 install:
     uv sync --all-packages
-    prek install --install-hooks
+    uv run pre-commit install --install-hooks
+    uv run pre-commit install --hook-type pre-push
 
 # Upgrade all dependencies
 # [group('Manage dependencies')]
 upgrade:
     uv lock --upgrade
-    prek auto-update
+    uv run pre-commit autoupdate
 
 # Dev environment
-dev: 
+dev:
     uv run -- python neuxo/manage.py runserver 0.0.0.0:8091
 
 # Run Celery worker for the Django app in neuxo

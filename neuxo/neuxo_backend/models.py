@@ -833,7 +833,10 @@ class EmailOpenedNotification(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(Users, on_delete=models.CASCADE, blank=True, null=True)
     email_tracker = models.OneToOneField(
-        EmailTracker, on_delete=models.CASCADE, null=True, related_name="opened_notification"
+        EmailTracker,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name="opened_notification",
     )
     data = models.JSONField(default=dict, blank=True, null=True)
     last_data = models.JSONField(default=dict, blank=True, null=True)
@@ -919,7 +922,9 @@ class SequenceEmail(models.Model):
     ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(Users, on_delete=models.CASCADE, blank=False)
-    signature = models.ForeignKey(Signature, on_delete=models.CASCADE, blank=True, null=True)
+    signature = models.ForeignKey(
+        Signature, on_delete=models.CASCADE, blank=True, null=True
+    )
     sequence_name = models.TextField(max_length=500, blank=True, null=True)
     email_targets = models.JSONField(default=list, blank=True, null=True)
     start_date = models.DateTimeField(default=timezone.now)
@@ -964,7 +969,9 @@ class SequenceEmailStep(models.Model):
 
 class SequenceEmailStepHistory(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    email_step = models.ForeignKey(SequenceEmailStep, on_delete=models.CASCADE, blank=False)
+    email_step = models.ForeignKey(
+        SequenceEmailStep, on_delete=models.CASCADE, blank=False
+    )
     email_sender = models.TextField(max_length=300, blank=True, null=True)
     email_target = models.TextField(max_length=300, blank=False, null=False)
     subject = models.TextField(blank=True, null=True)
@@ -1018,7 +1025,8 @@ class MailTemplateBimonthly(models.Model):
         db_table = "Mail_Template_Bimonthly"
 
 
-#--------------------------------- Apify Platform Token Handle-------------------------------------#
+# --------------------------------- Apify Platform Token Handle-------------------------------------#
+
 
 class ApifyToken(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

@@ -2,11 +2,11 @@
 Custom Filter Controller - Business Logic Layer
 Handles custom filter related business logic
 """
+
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
-from django.forms.models import model_to_dict
 from django.utils import timezone
 
 from neuxo_backend.models import CustomFilter
@@ -51,9 +51,11 @@ def update_custom_filter(
     filter_id: str, user_id: int, filter_name: str = None, filter_data: Dict = None
 ) -> Optional[Dict]:
     """Update an existing custom filter"""
-    existing = CustomFilter.objects.filter(id=filter_id).values(
-        "id", "filter_name", "user__id"
-    ).first()
+    existing = (
+        CustomFilter.objects.filter(id=filter_id)
+        .values("id", "filter_name", "user__id")
+        .first()
+    )
 
     if not existing:
         return {"error": "Filter not found"}
@@ -111,7 +113,9 @@ def save_custom_filter(
 
 def delete_custom_filter(filter_id: str, user_id: int) -> Dict:
     """Delete a custom filter"""
-    existing = CustomFilter.objects.filter(id=filter_id).values("id", "user__id").first()
+    existing = (
+        CustomFilter.objects.filter(id=filter_id).values("id", "user__id").first()
+    )
 
     if not existing:
         return {"error": "Filter not found"}

@@ -2,20 +2,16 @@
 Campaign Controller - Business Logic Layer
 Handles email campaign/sequence related business logic
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple
 
-from django.db.models import Count, F, IntegerField, Q, Sum, Case, When
+from django.db.models import Count, F, Q
 from django.utils import timezone
 
-from neuxo_backend.models import (
-    MailHistory,
-    SequenceEmail,
-    SequenceEmailStep,
-    SequenceEmailStepHistory,
-)
+from neuxo_backend.models import MailHistory, SequenceEmail, SequenceEmailStep
 
 
 def get_campaigns(
@@ -30,9 +26,11 @@ def get_campaigns(
     """
     Get all campaigns with statistics for a user
     """
-    campaigns = SequenceEmail.objects.filter(user_id=user_id).exclude(
-        sequence_status="PENDING"
-    ).order_by("-created_at")
+    campaigns = (
+        SequenceEmail.objects.filter(user_id=user_id)
+        .exclude(sequence_status="PENDING")
+        .order_by("-created_at")
+    )
 
     # Apply filters
     if start_date and end_date:
@@ -118,16 +116,18 @@ def get_campaigns(
             status_display = "Completed"
             status_choices = ["Remove"]
 
-        results.append({
-            "campaign_id": str(campaign.id),
-            "campaign_name": campaign.campaign_name,
-            "day_created": campaign.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "total_email_sent": total_sent,
-            "total_email_replied": reply_count,
-            "total_email_opened": total_opened,
-            "campaign_status": status_display,
-            "status_choice": status_choices,
-        })
+        results.append(
+            {
+                "campaign_id": str(campaign.id),
+                "campaign_name": campaign.campaign_name,
+                "day_created": campaign.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "total_email_sent": total_sent,
+                "total_email_replied": reply_count,
+                "total_email_opened": total_opened,
+                "campaign_status": status_display,
+                "status_choice": status_choices,
+            }
+        )
 
     pagination = {
         "page": page,
@@ -217,9 +217,7 @@ def get_campaign_details(
     email_targets = campaign.email_targets or []
 
     # Get sent emails
-    sent_emails = MailHistory.objects.filter(
-        campaign_id=campaign_id, type="SEND"
-    )
+    sent_emails = MailHistory.objects.filter(campaign_id=campaign_id, type="SEND")
     message_ids = list(sent_emails.values_list("message_id", flat=True).distinct())
 
     # Calculate statistics
@@ -254,23 +252,31 @@ def get_campaign_details(
         target_msg_ids = list(target_sent.values_list("message_id", flat=True))
 
         sent_count = target_sent.count()
-        reply_count = MailHistory.objects.filter(
-            email_ref_first_id__in=target_msg_ids,
-            type="RECIEVE",
-            status_mail="SUCCESS",
-        ).exclude(mail_send__icontains="noreply").count()
+        reply_count = (
+            MailHistory.objects.filter(
+                email_ref_first_id__in=target_msg_ids,
+                type="RECIEVE",
+                status_mail="SUCCESS",
+            )
+            .exclude(mail_send__icontains="noreply")
+            .count()
+        )
 
         opened_count = target_sent.filter(emailtracker__opened=True).count()
 
-        status = "REPLIED" if reply_count > 0 else ("OPENED" if opened_count > 0 else "SENT")
+        status = (
+            "REPLIED" if reply_count > 0 else ("OPENED" if opened_count > 0 else "SENT")
+        )
 
-        email_details.append({
-            "email": target_email,
-            "sent_count": sent_count,
-            "reply_count": reply_count,
-            "opened_count": opened_count,
-            "status": status,
-        })
+        email_details.append(
+            {
+                "email": target_email,
+                "sent_count": sent_count,
+                "reply_count": reply_count,
+                "opened_count": opened_count,
+                "status": status,
+            }
+        )
 
     # Apply email status filter
     if email_status:
@@ -288,8 +294,12 @@ def get_campaign_details(
         "campaign_status": status_display,
         "status_choice": status_choices,
         "created_at": campaign.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-        "start_date": campaign.start_date.strftime("%Y-%m-%d %H:%M:%S") if campaign.start_date else None,
-        "end_date": campaign.end_date.strftime("%Y-%m-%d %H:%M:%S") if campaign.end_date else None,
+        "start_date": campaign.start_date.strftime("%Y-%m-%d %H:%M:%S")
+        if campaign.start_date
+        else None,
+        "end_date": campaign.end_date.strftime("%Y-%m-%d %H:%M:%S")
+        if campaign.end_date
+        else None,
         "statistics": {
             "total_targets": len(email_targets),
             "total_sent": total_sent,
@@ -299,7 +309,8 @@ def get_campaign_details(
         },
         "pagination": {
             "page": page,
-            "total_page": (total_emails // limit) + (1 if total_emails % limit > 0 else 0),
+            "total_page": (total_emails // limit)
+            + (1 if total_emails % limit > 0 else 0),
             "total_item": total_emails,
         },
         "email_details": paginated_emails,
@@ -321,8 +332,12 @@ def get_campaign_about(campaign_id: str, user_id: int) -> Tuple[bool, Dict]:
         "source": campaign.source,
         "event_id": campaign.event_id,
         "created_at": campaign.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-        "start_date": campaign.start_date.strftime("%Y-%m-%d %H:%M:%S") if campaign.start_date else None,
-        "end_date": campaign.end_date.strftime("%Y-%m-%d %H:%M:%S") if campaign.end_date else None,
+        "start_date": campaign.start_date.strftime("%Y-%m-%d %H:%M:%S")
+        if campaign.start_date
+        else None,
+        "end_date": campaign.end_date.strftime("%Y-%m-%d %H:%M:%S")
+        if campaign.end_date
+        else None,
         "email_targets_count": len(campaign.email_targets or []),
         "enable_bimonthly_send": campaign.enable_bimonthly_send,
         "max_email_bimonthly": campaign.max_email_bimonthly,

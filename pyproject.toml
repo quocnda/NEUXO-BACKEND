@@ -144,11 +144,13 @@ dependencies = [
   "celery==5.4.0",
   "openpyxl",
   "beautifulsoup4",
-  "apify-client"
+  "apify-client",
+  "pytest-django",
 ]
 [dependency-groups]
 dev = [
   "ipykernel>=6.30.1",
+  "pre-commit>=4.2.0",
   "ruff>=0.13.1",
   # type checking
   "mypy[dmypy,faster-cache]>=1.18.2",

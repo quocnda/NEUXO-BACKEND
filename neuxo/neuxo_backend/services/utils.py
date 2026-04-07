@@ -2,9 +2,7 @@ from drf_spectacular.utils import OpenApiParameter
 
 # Shared parameters for pagination and filtering
 PARAMETERS = [
-    OpenApiParameter(
-        name="page", description="Page number", required=False, type=int
-    ),
+    OpenApiParameter(name="page", description="Page number", required=False, type=int),
     OpenApiParameter(
         name="limit", description="Number of items per page", required=False, type=int
     ),

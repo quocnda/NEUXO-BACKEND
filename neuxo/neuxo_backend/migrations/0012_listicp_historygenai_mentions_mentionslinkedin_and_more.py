@@ -7,138 +7,266 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('neuxo_backend', '0011_linkedinpersonalemail_personalemail_and_more'),
-        ('users', '0001_initial'),
+        ("neuxo_backend", "0011_linkedinpersonalemail_personalemail_and_more"),
+        ("users", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ListICP',
+            name="ListICP",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('icp_name', models.TextField(blank=True, null=True)),
-                ('icp_description', models.TextField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("icp_name", models.TextField(blank=True, null=True)),
+                ("icp_description", models.TextField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'db_table': 'List_ICP',
+                "db_table": "List_ICP",
             },
         ),
         migrations.CreateModel(
-            name='HistoryGenAI',
+            name="HistoryGenAI",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('role', models.TextField(blank=True, null=True)),
-                ('content', models.TextField(blank=True, null=True)),
-                ('completion_id', models.TextField(blank=True, null=True)),
-                ('summarize_content', models.TextField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
-                ('updated_at', models.DateTimeField(default=django.utils.timezone.now)),
-                ('order_number', models.IntegerField(default=0)),
-                ('company_id', models.TextField(blank=True, null=True)),
-                ('person_contact_id', models.TextField(blank=True, null=True)),
-                ('user', models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='users.users')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("role", models.TextField(blank=True, null=True)),
+                ("content", models.TextField(blank=True, null=True)),
+                ("completion_id", models.TextField(blank=True, null=True)),
+                ("summarize_content", models.TextField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
+                ("updated_at", models.DateTimeField(default=django.utils.timezone.now)),
+                ("order_number", models.IntegerField(default=0)),
+                ("company_id", models.TextField(blank=True, null=True)),
+                ("person_contact_id", models.TextField(blank=True, null=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        default=1,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="users.users",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'History_Gen_AI',
+                "db_table": "History_Gen_AI",
             },
         ),
         migrations.CreateModel(
-            name='Mentions',
+            name="Mentions",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('note', models.TextField(blank=True, null=True)),
-                ('type', models.TextField(blank=True, choices=[('SUB_DOMAIN', 'SUB_DOMAIN'), ('LINKEDIN', 'LINKEDIN'), ('TWITTER', 'TWITTER')])),
-                ('guest_id', models.TextField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
-                ('updated_at', models.DateTimeField(default=django.utils.timezone.now)),
-                ('company', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='neuxo_backend.linkedincompany')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("note", models.TextField(blank=True, null=True)),
+                (
+                    "type",
+                    models.TextField(
+                        blank=True,
+                        choices=[
+                            ("SUB_DOMAIN", "SUB_DOMAIN"),
+                            ("LINKEDIN", "LINKEDIN"),
+                            ("TWITTER", "TWITTER"),
+                        ],
+                    ),
+                ),
+                ("guest_id", models.TextField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
+                ("updated_at", models.DateTimeField(default=django.utils.timezone.now)),
+                (
+                    "company",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="neuxo_backend.linkedincompany",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'Mentions',
+                "db_table": "Mentions",
             },
         ),
         migrations.CreateModel(
-            name='MentionsLinkedin',
+            name="MentionsLinkedin",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('linkedin_post_url', models.TextField(blank=True, null=True)),
-                ('linkedin_repost_url', models.TextField(blank=True, null=True)),
-                ('description_repost', models.TextField(blank=True, null=True)),
-                ('note', models.TextField(blank=True, null=True)),
-                ('title', models.TextField(blank=True, null=True)),
-                ('description', models.TextField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
-                ('updated_at', models.DateTimeField(default=django.utils.timezone.now)),
-                ('mentions', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='neuxo_backend.mentions')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("linkedin_post_url", models.TextField(blank=True, null=True)),
+                ("linkedin_repost_url", models.TextField(blank=True, null=True)),
+                ("description_repost", models.TextField(blank=True, null=True)),
+                ("note", models.TextField(blank=True, null=True)),
+                ("title", models.TextField(blank=True, null=True)),
+                ("description", models.TextField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
+                ("updated_at", models.DateTimeField(default=django.utils.timezone.now)),
+                (
+                    "mentions",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="neuxo_backend.mentions",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'Mentions_Linkedin',
+                "db_table": "Mentions_Linkedin",
             },
         ),
         migrations.CreateModel(
-            name='MentionsSubDomain',
+            name="MentionsSubDomain",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('sub_domain', models.TextField(blank=True, null=True)),
-                ('ip', models.TextField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
-                ('updated_at', models.DateTimeField(default=django.utils.timezone.now)),
-                ('mentions', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='neuxo_backend.mentions')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("sub_domain", models.TextField(blank=True, null=True)),
+                ("ip", models.TextField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
+                ("updated_at", models.DateTimeField(default=django.utils.timezone.now)),
+                (
+                    "mentions",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="neuxo_backend.mentions",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'Mentions_SubDomain',
+                "db_table": "Mentions_SubDomain",
             },
         ),
         migrations.CreateModel(
-            name='MentionsTwitter',
+            name="MentionsTwitter",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('twitter_post_url', models.TextField(blank=True, null=True)),
-                ('title', models.TextField(blank=True, null=True)),
-                ('description', models.TextField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
-                ('updated_at', models.DateTimeField(default=django.utils.timezone.now)),
-                ('mentions', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='neuxo_backend.mentions')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("twitter_post_url", models.TextField(blank=True, null=True)),
+                ("title", models.TextField(blank=True, null=True)),
+                ("description", models.TextField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
+                ("updated_at", models.DateTimeField(default=django.utils.timezone.now)),
+                (
+                    "mentions",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="neuxo_backend.mentions",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'Mentions_Twitter',
+                "db_table": "Mentions_Twitter",
             },
         ),
         migrations.CreateModel(
-            name='NewsInformation',
+            name="NewsInformation",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name_company', models.TextField(blank=True, null=True)),
-                ('link_news', models.TextField(blank=True, null=True)),
-                ('note', models.TextField(blank=True, null=True)),
-                ('content', models.TextField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
-                ('updated_at', models.DateTimeField(default=django.utils.timezone.now)),
-                ('category', models.TextField(blank=True, null=True)),
-                ('time_post', models.DateTimeField(default=django.utils.timezone.now)),
-                ('title', models.TextField(blank=True, null=True)),
-                ('company', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='neuxo_backend.linkedincompany')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("name_company", models.TextField(blank=True, null=True)),
+                ("link_news", models.TextField(blank=True, null=True)),
+                ("note", models.TextField(blank=True, null=True)),
+                ("content", models.TextField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
+                ("updated_at", models.DateTimeField(default=django.utils.timezone.now)),
+                ("category", models.TextField(blank=True, null=True)),
+                ("time_post", models.DateTimeField(default=django.utils.timezone.now)),
+                ("title", models.TextField(blank=True, null=True)),
+                (
+                    "company",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="neuxo_backend.linkedincompany",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'News',
+                "db_table": "News",
             },
         ),
         migrations.CreateModel(
-            name='UserNotification',
+            name="UserNotification",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('is_read', models.DateTimeField(default=django.utils.timezone.now)),
-                ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
-                ('updated_at', models.DateTimeField(default=django.utils.timezone.now)),
-                ('notification', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='neuxo_backend.notification')),
-                ('user', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='users.users')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("is_read", models.DateTimeField(default=django.utils.timezone.now)),
+                ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
+                ("updated_at", models.DateTimeField(default=django.utils.timezone.now)),
+                (
+                    "notification",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="neuxo_backend.notification",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="users.users",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'User_Notification',
+                "db_table": "User_Notification",
             },
         ),
     ]

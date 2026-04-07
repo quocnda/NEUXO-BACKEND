@@ -5,16 +5,23 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('neuxo_backend', '0012_listicp_historygenai_mentions_mentionslinkedin_and_more'),
-        ('users', '0001_initial'),
+        (
+            "neuxo_backend",
+            "0012_listicp_historygenai_mentions_mentionslinkedin_and_more",
+        ),
+        ("users", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userwatchlist',
-            name='ICP',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='neuxo_backend.listicp'),
+            model_name="userwatchlist",
+            name="ICP",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="neuxo_backend.listicp",
+            ),
         ),
     ]

@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 from typing import Any, ClassVar, Literal
 
@@ -19,6 +18,8 @@ ActorName = Literal[
     "LINKEDIN_GET_POST",
     "LINKEDIN_GET_JOB",
 ]
+
+
 class LinkedinPostService(BaseLinkedin):
     ACTOR_NAME: ClassVar[ActorName] = "LINKEDIN_GET_POST"
     DEFAULT_RUN_INPUT: ClassVar[dict[str, Any]] = {
@@ -29,12 +30,18 @@ class LinkedinPostService(BaseLinkedin):
     }
 
     def run_get_posts_by_urls(self, urls: list[str]) -> list[dict[str, Any]]:
-        normalized_urls = [normalized_url for url in urls if (normalized_url := self._normalize_url(url))]
+        normalized_urls = [
+            normalized_url
+            for url in urls
+            if (normalized_url := self._normalize_url(url))
+        ]
         run_input = self._default_run_input()
         run_input["urls"] = normalized_urls
         return self.run_actor(actor_name="LINKEDIN_GET_POST", run_input=run_input)
 
-    def upsert_linkedin_post_mention(self, post: dict[str, Any]) -> MentionsLinkedin | None:
+    def upsert_linkedin_post_mention(
+        self, post: dict[str, Any]
+    ) -> MentionsLinkedin | None:
         company, person = self._resolve_company_and_person_for_post(post)
         if company is None:
             return None
@@ -48,14 +55,20 @@ class LinkedinPostService(BaseLinkedin):
         if posted_at is None:
             posted_at = timezone.now()
 
-        existing_query = MentionsLinkedin.objects.filter(mentions__company=company, linkedin_post_url=post_url)
+        existing_query = MentionsLinkedin.objects.filter(
+            mentions__company=company, linkedin_post_url=post_url
+        )
         if guest_id is None:
-            existing_query = existing_query.filter(Q(mentions__guest_id__isnull=True) | Q(mentions__guest_id=""))
+            existing_query = existing_query.filter(
+                Q(mentions__guest_id__isnull=True) | Q(mentions__guest_id="")
+            )
         else:
             existing_query = existing_query.filter(mentions__guest_id=guest_id)
         existing = existing_query.select_related("mentions").first()
 
-        title = self._safe_str(post.get("authorName")) or self._safe_str(self._dict_get(post, ["author", "name"]))
+        title = self._safe_str(post.get("authorName")) or self._safe_str(
+            self._dict_get(post, ["author", "name"])
+        )
 
         defaults: dict[str, Any] = {
             "linkedin_post_url": post_url,
@@ -72,7 +85,9 @@ class LinkedinPostService(BaseLinkedin):
             "author_type": self._safe_str(post.get("authorType"), 50),
             "author_profile_url": self._safe_str(post.get("authorProfileUrl")),
             "author_urn": self._safe_str(post.get("authorUrn")),
-            "author_followers_count": self._safe_str(post.get("authorFollowersCount"), 100),
+            "author_followers_count": self._safe_str(
+                post.get("authorFollowersCount"), 100
+            ),
             "posted_at_iso": posted_at,
             "posted_at_timestamp": post.get("postedAtTimestamp"),
             "time_since_posted": self._safe_str(post.get("timeSincePosted"), 50),
@@ -104,13 +119,19 @@ class LinkedinPostService(BaseLinkedin):
                 note="LinkedIn post",
                 updated_at=posted_at,
             )
-            linkedin_mention = MentionsLinkedin.objects.create(mentions=mentions, **defaults)
+            linkedin_mention = MentionsLinkedin.objects.create(
+                mentions=mentions, **defaults
+            )
 
         notification, created = Notification.objects.get_or_create(
             reference_id=str(linkedin_mention.id),
             type="LINKEDIN",
             company=company,
-            defaults={"title": title, "post_url": linkedin_mention.linkedin_post_url, "time_post": posted_at},
+            defaults={
+                "title": title,
+                "post_url": linkedin_mention.linkedin_post_url,
+                "time_post": posted_at,
+            },
         )
         if not created:
             notification.title = title
@@ -118,14 +139,18 @@ class LinkedinPostService(BaseLinkedin):
             notification.time_post = posted_at
             notification.guest_id = guest_id
             notification.company = company
-            notification.save(update_fields=["title", "post_url", "time_post", "guest_id", "company"])
+            notification.save(
+                update_fields=["title", "post_url", "time_post", "guest_id", "company"]
+            )
         else:
             notification.guest_id = guest_id
             notification.save(update_fields=["guest_id"])
 
         return linkedin_mention
 
-    def run_get_posts_and_upsert_mentions_by_urls(self, urls: list[str]) -> list[MentionsLinkedin]:
+    def run_get_posts_and_upsert_mentions_by_urls(
+        self, urls: list[str]
+    ) -> list[MentionsLinkedin]:
         posts = self.run_get_posts_by_urls(urls)
         created_mentions: list[MentionsLinkedin] = []
         for post in posts:

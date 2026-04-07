@@ -19,6 +19,7 @@ ActorName = Literal[
     "LINKEDIN_GET_JOB",
 ]
 
+
 class LinkedinJobService(BaseLinkedin):
     ACTOR_NAME: ClassVar[ActorName] = "LINKEDIN_GET_JOB"
     DEFAULT_RUN_INPUT: ClassVar[dict[str, Any]] = {
@@ -28,7 +29,9 @@ class LinkedinJobService(BaseLinkedin):
         "start_jobs": 0,
     }
 
-    def run_get_jobs_by_company_names(self, company_names: list[str]) -> list[dict[str, Any]]:
+    def run_get_jobs_by_company_names(
+        self, company_names: list[str]
+    ) -> list[dict[str, Any]]:
         run_input = self._default_run_input()
         run_input["company_names"] = company_names
         return self.run_actor(actor_name="LINKEDIN_GET_JOB", run_input=run_input)
@@ -71,7 +74,11 @@ class LinkedinJobService(BaseLinkedin):
         if not title:
             raise ValueError("job.job_title is required")
 
-        linkedin_url = self._normalize_url(self._safe_str(job.get("job_url")) or self._safe_str(job.get("apply_url")) or "")
+        linkedin_url = self._normalize_url(
+            self._safe_str(job.get("job_url"))
+            or self._safe_str(job.get("apply_url"))
+            or ""
+        )
         company = self._resolve_job_company(job)
 
         location_name = self._safe_str(job.get("location"), 100)
@@ -83,7 +90,9 @@ class LinkedinJobService(BaseLinkedin):
         num_applicants = self._safe_str(job.get("num_applicants"))
         salary_range = self._safe_str(job.get("salary_range"))
         easy_apply_value = job.get("easy_apply")
-        easy_apply_text = str(easy_apply_value) if easy_apply_value is not None else None
+        easy_apply_text = (
+            str(easy_apply_value) if easy_apply_value is not None else None
+        )
 
         seniority_level = self._safe_str(job.get("seniority_level"))
         employment_type = self._safe_str(job.get("employment_type"))
@@ -101,10 +110,18 @@ class LinkedinJobService(BaseLinkedin):
         short_description = " | ".join(part for part in short_description_parts if part)
 
         note_parts = [
-            f"job_id={self._safe_str(job.get('job_id'))}" if self._safe_str(job.get("job_id")) else None,
-            f"company_url={self._safe_str(job.get('company_url'))}" if self._safe_str(job.get("company_url")) else None,
-            f"company_logo_url={self._safe_str(job.get('company_logo_url'))}" if self._safe_str(job.get("company_logo_url")) else None,
-            f"apply_url={self._safe_str(job.get('apply_url'))}" if self._safe_str(job.get("apply_url")) else None,
+            f"job_id={self._safe_str(job.get('job_id'))}"
+            if self._safe_str(job.get("job_id"))
+            else None,
+            f"company_url={self._safe_str(job.get('company_url'))}"
+            if self._safe_str(job.get("company_url"))
+            else None,
+            f"company_logo_url={self._safe_str(job.get('company_logo_url'))}"
+            if self._safe_str(job.get("company_logo_url"))
+            else None,
+            f"apply_url={self._safe_str(job.get('apply_url'))}"
+            if self._safe_str(job.get("apply_url"))
+            else None,
         ]
         note = "\n".join(part for part in note_parts if part)
 
@@ -130,15 +147,26 @@ class LinkedinJobService(BaseLinkedin):
             existing.linkedin_url = linkedin_url or existing.linkedin_url
             existing.last_check = timezone.now()
             existing.updated_at = timezone.now()
-            existing.save(update_fields=[*list(defaults.keys()), "linkedin_url", "last_check", "updated_at"])
+            existing.save(
+                update_fields=[
+                    *list(defaults.keys()),
+                    "linkedin_url",
+                    "last_check",
+                    "updated_at",
+                ]
+            )
             linkedin_job = existing
         else:
-            linkedin_job = LinkedinJob.objects.create(linkedin_url=linkedin_url or None, last_check=timezone.now(), **defaults)
+            linkedin_job = LinkedinJob.objects.create(
+                linkedin_url=linkedin_url or None, last_check=timezone.now(), **defaults
+            )
 
         self._upsert_job_notification(linkedin_job)
         return linkedin_job
 
-    def run_get_jobs_and_upsert_by_company_names(self, company_names: list[str]) -> list[LinkedinJob]:
+    def run_get_jobs_and_upsert_by_company_names(
+        self, company_names: list[str]
+    ) -> list[LinkedinJob]:
         jobs = self.run_get_jobs_by_company_names(company_names)
         upserted_jobs: list[LinkedinJob] = []
         for job in jobs:
