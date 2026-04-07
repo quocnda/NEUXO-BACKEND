@@ -451,6 +451,8 @@ class LinkedinPersonalEmail(models.Model):
         LinkedinCompany, on_delete=models.CASCADE, blank=True, null=True
     )
     twitter_summary = models.TextField(blank=True, null=True)
+    about = models.TextField(blank=True, null=True)
+    education = models.JSONField(default=list, blank=True, null=True)
 
     note = models.TextField(blank=True, null=True)
     is_update = models.IntegerField(default=0)
@@ -470,6 +472,22 @@ class PersonalExperience(models.Model):
     title = models.TextField(blank=True, null=True)
     company_name = models.TextField(blank=True, null=True)
     time_period = models.TextField(blank=True, null=True)
+    location = models.TextField(blank=True, null=True)
+    employment_type = models.CharField(max_length=100, blank=True, null=True)
+    workplace_type = models.CharField(max_length=100, blank=True, null=True)
+    duration = models.CharField(max_length=100, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    start_date_text = models.CharField(max_length=100, blank=True, null=True)
+    start_month = models.CharField(max_length=20, blank=True, null=True)
+    start_year = models.IntegerField(blank=True, null=True)
+    end_date_text = models.CharField(max_length=100, blank=True, null=True)
+    end_month = models.CharField(max_length=20, blank=True, null=True)
+    end_year = models.IntegerField(blank=True, null=True)
+    is_current = models.BooleanField(default=False)
+    company_universal_name = models.CharField(max_length=255, blank=True, null=True)
+    experience_group_id = models.CharField(max_length=255, blank=True, null=True)
+    source_profile_url = models.URLField(max_length=500, blank=True, null=True)
+    raw_data = models.JSONField(default=dict, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)
     personal = models.ForeignKey(
@@ -552,6 +570,29 @@ class MentionsLinkedin(models.Model):
     note = models.TextField(blank=True, null=True)
     title = models.TextField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
+    post_urn = models.TextField(blank=True, null=True)
+    share_urn = models.TextField(blank=True, null=True)
+    post_type = models.CharField(max_length=50, blank=True, null=True)
+    input_url = models.TextField(blank=True, null=True)
+
+    author_name = models.TextField(blank=True, null=True)
+    author_type = models.CharField(max_length=50, blank=True, null=True)
+    author_profile_url = models.TextField(blank=True, null=True)
+    author_urn = models.TextField(blank=True, null=True)
+    author_followers_count = models.CharField(max_length=100, blank=True, null=True)
+
+    posted_at_iso = models.DateTimeField(blank=True, null=True)
+    posted_at_timestamp = models.BigIntegerField(blank=True, null=True)
+    time_since_posted = models.CharField(max_length=50, blank=True, null=True)
+
+    num_likes = models.IntegerField(blank=True, null=True)
+    num_comments = models.IntegerField(blank=True, null=True)
+    num_shares = models.IntegerField(blank=True, null=True)
+
+    images = models.JSONField(default=list, blank=True, null=True)
+    attributes = models.JSONField(default=list, blank=True, null=True)
+    raw_data = models.JSONField(default=dict, blank=True, null=True)
+
     mentions = models.ForeignKey(
         Mentions, on_delete=models.CASCADE, blank=False, null=False
     )
@@ -975,3 +1016,27 @@ class MailTemplateBimonthly(models.Model):
 
     class Meta:
         db_table = "Mail_Template_Bimonthly"
+
+
+#--------------------------------- Apify Platform Token Handle-------------------------------------#
+
+class ApifyToken(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    token = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    next_time_available = models.DateTimeField(default=None, null=True, blank=True)
+    gmail = models.TextField(blank=True, null=True)
+    pass_gmail = models.TextField(blank=True, null=True)
+    STATUS_CHOICES = [
+        ("ACTIVE", "ACTIVE"),
+        ("INACTIVE", "INACTIVE"),
+    ]
+    status = models.CharField(
+        max_length=100,
+        choices=STATUS_CHOICES,
+        default="ACTIVE",
+    )
+
+    class Meta:
+        db_table = "Apify_Token"

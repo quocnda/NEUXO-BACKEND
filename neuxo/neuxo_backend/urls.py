@@ -132,6 +132,16 @@ urlpatterns = [
         company_details_services.getTriggerByCompanyID,
         name="get_trigger_by_company_id",
     ),
+    path(
+        "company/notify/seen",
+        company_details_services.seenNotifyForCompany,
+        name="seen_notify_for_company",
+    ),
+    path(
+        "company/<str:id>/notify",
+        company_details_services.getNotifyForCompany,
+        name="get_notify_for_company",
+    ),
     # ----------------------------- Jobs -----------------------------------#
     path(
         "jobs/list",

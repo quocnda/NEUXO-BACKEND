@@ -142,7 +142,9 @@ dependencies = [
   "mysqlclient==2.1.1",
   "drf-spectacular-sidecar",
   "celery==5.4.0",
-  "openpyxl"
+  "openpyxl",
+  "beautifulsoup4",
+  "apify-client"
 ]
 [dependency-groups]
 dev = [

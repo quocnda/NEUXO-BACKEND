@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import logging
 import re
 import operator
+import threading
+from pathlib import Path
 from collections import defaultdict
 from datetime import datetime, timedelta
 from functools import reduce
@@ -30,7 +33,15 @@ from neuxo_backend.models import (
     Notification,
     UserNotification,
 )
+from neuxo_backend.crawler.LinkedinJobServices import LinkedinJobService
+from neuxo_backend.crawler.LinkedinLeadService import LinkedinLeadService
+from neuxo_backend.crawler.LinkedinPostServices import LinkedinPostService
+from neuxo_backend.crawler.LinkedinProfileService import LinkedinProfileService
+from neuxo_backend.crawler.Subdomain import Subdomains
 from users.models import UserWatchList, Users
+
+logger = logging.getLogger(__name__)
+WATCHLIST_LOG_DIR = Path(__file__).resolve().parents[2] / "log"
 
 
 # ------------------------------------ Utility Functions ------------------------------------#
@@ -564,6 +575,88 @@ def get_watchlist_by_user_team(list_icp=None, search=None, listUserId=[]):
 # ------------------------------------ Add/Remove Watchlist ------------------------------------#
 
 
+def _append_watchlist_pipeline_log(company_id: str, message: str) -> None:
+    """Append watchlist pipeline logs to neuxo/log/<company_id>.log."""
+    try:
+        WATCHLIST_LOG_DIR.mkdir(parents=True, exist_ok=True)
+        log_file = WATCHLIST_LOG_DIR / f"{company_id}.log"
+        time_text = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+        with log_file.open("a", encoding="utf-8") as file_obj:
+            file_obj.write(f"[{time_text}] {message}\n")
+    except Exception:
+        logger.exception("Failed writing watchlist log for company_id=%s", company_id)
+
+
+def _run_watchlist_linkedin_pipeline(company_id: str) -> None:
+    """Run LinkedIn enrichment in background for a watched company."""
+    try:
+        company = LinkedinCompany.objects.filter(id=company_id).first()
+        if company is None:
+            _append_watchlist_pipeline_log(company_id, "company not found, skip pipeline")
+            return
+
+        company_name = (company.name or "").strip()
+        company_website = (company.website or "").strip()
+        company_linkedin_url = (company.linkedin_url or "").strip()
+
+        leads_service = LinkedinLeadService()
+        profile_service = LinkedinProfileService()
+        post_service = LinkedinPostService()
+        job_service = LinkedinJobService()
+        sub_domain = Subdomains()
+        _append_watchlist_pipeline_log(
+            company_id,
+            (
+                "start linkedin pipeline "
+                f"company_name={company_name or '<empty>'} "
+                f"company_website={company_website or '<empty>'} "
+                f"company_linkedin_url={company_linkedin_url or '<empty>'}"
+            ),
+        )
+
+        lead_records = []
+        if company_website:
+            lead_records = leads_service.run_get_leads_and_upsert_by_company_url([company_website])
+        _append_watchlist_pipeline_log(company_id, f"lead_records={len(lead_records)}")
+
+        people_urls = [
+            person.linkedin_url.strip()
+            for person in lead_records
+            if person.linkedin_url and person.linkedin_url.strip()
+        ]
+        people_urls = list(dict.fromkeys(people_urls))
+
+        profile_records = []
+        if people_urls:
+            profile_records = profile_service.run_get_profiles_and_upsert_by_query(people_urls)
+        _append_watchlist_pipeline_log(company_id, f"profile_records={len(profile_records)}")
+
+        post_urls = list(dict.fromkeys([
+            *([company_linkedin_url] if company_linkedin_url else []),
+            *people_urls,
+        ]))
+
+        post_records = []
+        if post_urls:
+            post_records = post_service.run_get_posts_and_upsert_mentions_by_urls(post_urls)
+        _append_watchlist_pipeline_log(company_id, f"post_records={len(post_records)}")
+
+        job_records = []
+        if company_name:
+            job_records = job_service.run_get_jobs_and_upsert_by_company_names([company_name])
+        if company_website:
+            subdomain_count = sub_domain.getSubdomainsByLinkCompany(company_website)
+            _append_watchlist_pipeline_log(company_id, f"subdomain_count={subdomain_count}")
+        _append_watchlist_pipeline_log(company_id, f"job_records={len(job_records)}")
+        _append_watchlist_pipeline_log(company_id, "linkedin pipeline completed")
+    except Exception as exc:
+        logger.exception("Watchlist LinkedIn pipeline failed for company_id=%s", company_id)
+        _append_watchlist_pipeline_log(
+            company_id,
+            f"linkedin pipeline failed: {type(exc).__name__}: {exc}",
+        )
+
+
 def add_company_to_watchlist(user_id: int, company_id: str) -> tuple:
     """Add a company to user's watchlist."""
     count_watchlist = UserWatchList.objects.filter(user_id=user_id).count()
@@ -581,6 +674,13 @@ def add_company_to_watchlist(user_id: int, company_id: str) -> tuple:
         return False, "Company not found"
 
     UserWatchList.objects.create(user_id=user_id, company_id=company_id)
+
+    threading.Thread(
+        target=_run_watchlist_linkedin_pipeline,
+        args=(str(company.id),),
+        daemon=True,
+    ).start()
+
     return True, "Success"
 
 

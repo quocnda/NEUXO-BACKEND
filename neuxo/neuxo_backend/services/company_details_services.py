@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 from django.http import HttpRequest, JsonResponse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view
@@ -22,7 +25,9 @@ from neuxo_backend.controller.company_details_controller import (
     updateEmailForContact as _updateEmail,
 )
 from neuxo_backend.models import LinkedinCompany
+from neuxo_backend.models import Notification, UserNotification
 from neuxo_backend.services import PARAMETERS
+from users.models import Users
 from users.utils.utils import requireLogin
 
 
@@ -446,6 +451,109 @@ def deleteContactCompany(request: HttpRequest, id: str) -> JsonResponse:
         error = deleteContact(user_id, id)
         if error:
             return JsonResponse({"message": error}, status=HTTP_400_BAD_REQUEST)
+        return JsonResponse({"message": "Success"}, status=HTTP_200_OK)
+    except Exception as e:
+        return JsonResponse({"message": str(e)}, status=HTTP_400_BAD_REQUEST)
+
+
+# ---------------------------------------- getNotifyForCompany ---------------------------------------- #
+
+
+@extend_schema(
+    parameters=None,
+    responses={"200": "Success"},
+    auth=None,
+    operation_id="GET_NotifyForCompany",
+    tags=["Company"],
+    operation=None,
+)
+@csrf_exempt
+@api_view(["GET"])
+@requireLogin
+def getNotifyForCompany(request: HttpRequest, id: str) -> JsonResponse:
+    if request.method != "GET":
+        return JsonResponse(
+            {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
+        )
+    try:
+        current_user = request.user.get("id", None)
+        seven_days_ago = timezone.now() - timedelta(days=7)
+
+        company = LinkedinCompany.objects.filter(id=id).first()
+        if not company:
+            return JsonResponse(
+                {"message": "Company not found"}, status=HTTP_400_BAD_REQUEST
+            )
+
+        count_notify_is_read = UserNotification.objects.filter(
+            user_id=current_user,
+            notification__company_id=id,
+            notification__time_post__gte=seven_days_ago,
+        ).count()
+        count_notify_all = Notification.objects.filter(
+            company_id=id, time_post__gte=seven_days_ago
+        ).count()
+
+        new_notify = count_notify_all - count_notify_is_read
+        return JsonResponse(
+            {"message": "Success", "new_notify": new_notify}, status=HTTP_200_OK
+        )
+    except Exception as e:
+        return JsonResponse({"message": str(e)}, status=HTTP_400_BAD_REQUEST)
+
+
+# ---------------------------------------- seenNotifyForCompany ---------------------------------------- #
+
+
+@extend_schema(
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "ids": {"type": "string", "example": '"id1", "id2"'},
+            },
+        }
+    },
+    responses={"200": "Success"},
+    auth=None,
+    operation_id="POST_seenNotifyForCompany",
+    tags=["Company"],
+    operation=None,
+)
+@csrf_exempt
+@api_view(["POST"])
+@requireLogin
+def seenNotifyForCompany(request: HttpRequest) -> JsonResponse:
+    if request.method != "POST":
+        return JsonResponse(
+            {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
+        )
+    try:
+        user_id = request.user.get("id", None)
+        notify_ids = request.data.get("ids")
+
+        if not notify_ids:
+            return JsonResponse(
+                {"message": "Notify ids is required"}, status=HTTP_400_BAD_REQUEST
+            )
+
+        user = Users.objects.filter(id=user_id).first()
+        notify_ids = notify_ids.split(",")
+        for notify_id in notify_ids:
+            notify = Notification.objects.filter(id=notify_id).first()
+            if not notify:
+                return JsonResponse(
+                    {"message": "Notify not found"}, status=HTTP_400_BAD_REQUEST
+                )
+
+            check_exist_seen = UserNotification.objects.filter(
+                user=user, notification=notify
+            ).exists()
+            if check_exist_seen:
+                continue
+
+            UserNotification.objects.create(user=user, notification=notify)
+
         return JsonResponse({"message": "Success"}, status=HTTP_200_OK)
     except Exception as e:
         return JsonResponse({"message": str(e)}, status=HTTP_400_BAD_REQUEST)

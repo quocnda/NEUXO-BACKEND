@@ -1,0 +1,4 @@
+DEFAULT_MAP_ACTOR_TO_ID = {'LINKEDIN_GET_LEADS' : 'T1XDXWc1L92AfIJtd',
+                           'LINKEDIN_GET_PROFILE_PERSON' : 'LpVuK3Zozwuipa5bp', 
+                           'LINKEDIN_GET_POST' : 'Wpp1BZ6yGWjySadk3',
+                           'LINKEDIN_GET_JOB' : 'JkfTWxtpgfvcRQn3p'}

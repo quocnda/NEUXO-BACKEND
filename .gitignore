@@ -14,3 +14,4 @@ __pycache__/
 *.pyd
 
 neuxo/neuxo_backend/data/
+neuxo/log/

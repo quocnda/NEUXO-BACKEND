@@ -89,7 +89,7 @@ class Subdomains():
             result.append({'subdomain': href, 'date': parsed_date})
         return result
     
-    def getSubdomainsByLinkCompany(self, web_url: str) -> None:
+    def getSubdomainsByLinkCompany(self, web_url: str) -> int:
         domain = ''
         if 'http' not in web_url:
             domain = web_url
@@ -102,14 +102,14 @@ class Subdomains():
         domain = domain.lower()
         print('---------->>> DOMAIN :', domain)
         list_subdomain: list[dict[str, str]] = self.getSubdomains(domain)
-        self.saveToDB(web_url, list_subdomain)
+        return self.saveToDB(web_url, list_subdomain)
 
-    def saveToDB(self, web_url: str, subdomains: list[dict[str, str]]):
+    def saveToDB(self, web_url: str, subdomains: list[dict[str, str]]) -> int:
         company = LinkedinCompany.objects.filter(website=web_url).first()
         mentions_subdomain_old = list(MentionsSubDomain.objects.filter(mentions__company=company).values_list('sub_domain', flat=True))
         if not company:
             print(f'Company with web_url {web_url} not found in database.')
-            return
+            return 0
         
         mentions_list = []
         subdomain_mentions_list = []
@@ -155,6 +155,7 @@ class Subdomains():
         # Bulk create notifications
         Notification.objects.bulk_create(notifications_list, ignore_conflicts=True)
         print('---------->>> Created Notifications:', len(notifications_list))
-    
+        self.driver.quit()
+        return len(created_subdomain_mentions)
     def driverQuit(self):
         self.driver.quit()
