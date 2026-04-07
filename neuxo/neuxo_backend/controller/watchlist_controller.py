@@ -941,10 +941,10 @@ def update_contact(contact_id: str, linkedin_url: str = None, twitter_url: str =
 
 def get_all_mentioned_company_per_user(user_id: int, company_id: str, filter_type: str = None, offset: int = 0, limit: int = 10):
     """Get all mentions for a company for a user."""
-    if offset == 0:
-        seven_days_ago = timezone.now() - timedelta(days=7)
-    else:
-        seven_days_ago = timezone.make_aware(datetime(2024, 1, 1))
+    # if offset == 0:
+    #     seven_days_ago = timezone.now() - timedelta(days=7)
+    # else:
+    seven_days_ago = timezone.make_aware(datetime(2024, 1, 1))
 
     company = LinkedinCompany.objects.filter(id=company_id).first()
     if not company:

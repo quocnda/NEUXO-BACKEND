@@ -2,6 +2,7 @@
 from __future__ import annotations
 from typing import Any, ClassVar, Literal
 
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from neuxo_backend.models import (
@@ -34,9 +35,10 @@ class LinkedinPostService(BaseLinkedin):
         return self.run_actor(actor_name="LINKEDIN_GET_POST", run_input=run_input)
 
     def upsert_linkedin_post_mention(self, post: dict[str, Any]) -> MentionsLinkedin | None:
-        company = self._resolve_company_for_post(post)
+        company, person = self._resolve_company_and_person_for_post(post)
         if company is None:
             return None
+        guest_id = str(person.id) if person is not None else None
 
         post_url = self._normalize_url(str(post.get("url") or ""))
         if not post_url:
@@ -46,11 +48,12 @@ class LinkedinPostService(BaseLinkedin):
         if posted_at is None:
             posted_at = timezone.now()
 
-        existing = (
-            MentionsLinkedin.objects.filter(mentions__company=company, linkedin_post_url=post_url)
-            .select_related("mentions")
-            .first()
-        )
+        existing_query = MentionsLinkedin.objects.filter(mentions__company=company, linkedin_post_url=post_url)
+        if guest_id is None:
+            existing_query = existing_query.filter(Q(mentions__guest_id__isnull=True) | Q(mentions__guest_id=""))
+        else:
+            existing_query = existing_query.filter(mentions__guest_id=guest_id)
+        existing = existing_query.select_related("mentions").first()
 
         title = self._safe_str(post.get("authorName")) or self._safe_str(self._dict_get(post, ["author", "name"]))
 
@@ -84,15 +87,23 @@ class LinkedinPostService(BaseLinkedin):
 
         if existing is not None:
             mentions = existing.mentions
+            mentions.guest_id = guest_id
+            mentions.company = company
             mentions.updated_at = posted_at
-            mentions.save(update_fields=["updated_at"])
+            mentions.save(update_fields=["guest_id", "company", "updated_at"])
 
             for field, value in defaults.items():
                 setattr(existing, field, value)
             existing.save(update_fields=list(defaults.keys()))
             linkedin_mention = existing
         else:
-            mentions = Mentions.objects.create(company=company, type="LINKEDIN", note="LinkedIn post", updated_at=posted_at)
+            mentions = Mentions.objects.create(
+                company=company,
+                guest_id=guest_id,
+                type="LINKEDIN",
+                note="LinkedIn post",
+                updated_at=posted_at,
+            )
             linkedin_mention = MentionsLinkedin.objects.create(mentions=mentions, **defaults)
 
         notification, created = Notification.objects.get_or_create(
@@ -105,7 +116,12 @@ class LinkedinPostService(BaseLinkedin):
             notification.title = title
             notification.post_url = linkedin_mention.linkedin_post_url
             notification.time_post = posted_at
-            notification.save(update_fields=["title", "post_url", "time_post"])
+            notification.guest_id = guest_id
+            notification.company = company
+            notification.save(update_fields=["title", "post_url", "time_post", "guest_id", "company"])
+        else:
+            notification.guest_id = guest_id
+            notification.save(update_fields=["guest_id"])
 
         return linkedin_mention
 

@@ -193,7 +193,14 @@ class BaseLinkedin:
         if not url:
             return ""
         return url.strip().rstrip("/")
-
+    @staticmethod
+    def _get_linkedin_uid(url: str | None) -> str | None:
+        if not url:
+            return None
+        uid = url.split('company/')[-1] if 'company/' in url else url.split('in/')[-1] if 'in/' in url else None
+        if uid:
+            return uid.replace('/', '').strip()
+        return None
     @classmethod
     def _extract_website_terms(cls, website: str | None) -> list[str]:
         if not website:
@@ -253,28 +260,72 @@ class BaseLinkedin:
         return BaseLinkedin._normalize_url(match.group(1))
 
     def _find_company(self, company_linkedin_url: str | None = None, company_website: str | None = None) -> LinkedinCompany | None:
-        company_linkedin_url = self._normalize_url(company_linkedin_url)
+        uid_linkedin = self._get_linkedin_uid(company_linkedin_url)
         company_website = self._normalize_url(company_website)
-        company_website_terms = self._extract_website_terms(company_website)
 
         company_query = Q()
         has_company_lookup = False
-        if company_linkedin_url:
-            company_query |= Q(linkedin_url=company_linkedin_url) | Q(linkedin_url=f"{company_linkedin_url}/")
+        if uid_linkedin:
+            company_query |= Q(linkedin_url=company_linkedin_url) | Q(linkedin_url=f"{company_linkedin_url}")
             has_company_lookup = True
         if company_website:
             company_query |= Q(website=company_website) | Q(website=f"{company_website}/")
-            for term in company_website_terms:
-                company_query |= Q(website__icontains=term)
             has_company_lookup = True
 
         if not has_company_lookup:
             return None
         return LinkedinCompany.objects.filter(company_query).first()
 
-    def _resolve_company_for_post(self, post: dict[str, Any]) -> LinkedinCompany | None:
+    @staticmethod
+    def _find_person_by_linkedin_url(person_url: str | None) -> LinkedinPersonalEmail | None:
+        normalized_person_url = BaseLinkedin._normalize_url(person_url)
+        if not normalized_person_url:
+            return None
+
+        return (
+            LinkedinPersonalEmail.objects.filter(
+                Q(linkedin_url=normalized_person_url) | Q(linkedin_url=f"{normalized_person_url}/")
+            )
+            .select_related("company")
+            .first()
+        )
+
+    def _resolve_company_and_person_for_post(
+        self,
+        post: dict[str, Any],
+    ) -> tuple[LinkedinCompany | None, LinkedinPersonalEmail | None]:
         author_profile_url = self._safe_str(post.get("authorProfileUrl"))
         input_url = self._safe_str(post.get("inputUrl"))
+
+        input_company_url = self._extract_linkedin_company_url(input_url)
+        if input_company_url:
+            company_url_candidates = [input_company_url]
+            author_universal_name = self._safe_str(self._dict_get(post, ["author", "universalName"]))
+            if author_universal_name:
+                company_url_candidates.append(
+                    self._normalize_url(f"https://www.linkedin.com/company/{author_universal_name}")
+                )
+
+            for company_url in company_url_candidates:
+                if not company_url:
+                    continue
+                company = self._find_company(company_linkedin_url=company_url)
+                if company is not None:
+                    return company, None
+            return None, None
+
+        input_person_url = self._extract_linkedin_person_url(input_url)
+        if input_person_url:
+            person_url_candidates = [
+                input_person_url,
+                self._extract_linkedin_person_url(author_profile_url),
+            ]
+
+            for person_url in person_url_candidates:
+                person = self._find_person_by_linkedin_url(person_url)
+                if person is not None and person.company is not None:
+                    return person.company, person
+            return None, None
 
         company_url_candidates = [self._extract_linkedin_company_url(input_url)]
         author_universal_name = self._safe_str(self._dict_get(post, ["author", "universalName"]))
@@ -286,7 +337,7 @@ class BaseLinkedin:
                 continue
             company = self._find_company(company_linkedin_url=company_url)
             if company is not None:
-                return company
+                return company, None
 
         person_url_candidates = [
             self._extract_linkedin_person_url(input_url),
@@ -294,17 +345,15 @@ class BaseLinkedin:
         ]
 
         for person_url in person_url_candidates:
-            if not person_url:
-                continue
-            person = (
-                LinkedinPersonalEmail.objects.filter(Q(linkedin_url=person_url) | Q(linkedin_url=f"{person_url}/"))
-                .select_related("company")
-                .first()
-            )
+            person = self._find_person_by_linkedin_url(person_url)
             if person is not None and person.company is not None:
-                return person.company
+                return person.company, person
 
-        return None
+        return None, None
+
+    def _resolve_company_for_post(self, post: dict[str, Any]) -> LinkedinCompany | None:
+        company, _ = self._resolve_company_and_person_for_post(post)
+        return company
 
     @staticmethod
     def _first_csv_item(value: Any) -> str | None:

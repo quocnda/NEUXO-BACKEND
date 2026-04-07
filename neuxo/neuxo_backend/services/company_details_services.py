@@ -477,7 +477,7 @@ def getNotifyForCompany(request: HttpRequest, id: str) -> JsonResponse:
         )
     try:
         current_user = request.user.get("id", None)
-        seven_days_ago = timezone.now() - timedelta(days=7)
+        seven_days_ago = timezone.now() - timedelta(days=1024)
 
         company = LinkedinCompany.objects.filter(id=id).first()
         if not company:
