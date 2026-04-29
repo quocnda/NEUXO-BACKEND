@@ -29,6 +29,10 @@ class LinkedinJobService(BaseLinkedin):
         "start_jobs": 0,
     }
 
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        kwargs["actor_name"] = self.ACTOR_NAME
+        super().__init__(*args, **kwargs)
+
     def run_get_jobs_by_company_names(
         self, company_names: list[str]
     ) -> list[dict[str, Any]]:

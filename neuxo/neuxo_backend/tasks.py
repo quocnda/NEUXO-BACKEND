@@ -236,10 +236,18 @@ def _upsert_message(
         uid=uid,
     )
 
+    body_text, body_html = _extract_message_bodies(parsed_message)
+
     MailHistory.objects.update_or_create(
         user_id=account.user_id,
         message_id=payload["message_id"],
         defaults=payload,
+    )
+
+    _mark_bounced_messages_from_payload(
+        payload=payload,
+        body_text=body_text,
+        body_html=body_html,
     )
 
 
@@ -308,16 +316,8 @@ def _mark_bounced_messages_from_payload(
     if main_target_mail != "mailer-daemon@googlemail.com":
         return 0
 
-    reference_ids = []
-    for candidate in (
-        payload.get("email_reply_id"),
-        payload.get("email_ref_first_id"),
-    ):
-        normalized = (candidate or "").strip()
-        if normalized and normalized not in reference_ids:
-            reference_ids.append(normalized)
-
-    if not reference_ids:
+    reply_id = (payload.get("email_reply_id") or "").strip()
+    if not reply_id:
         return 0
 
     error_message = (body_text or body_html or "").strip()
@@ -334,7 +334,7 @@ def _mark_bounced_messages_from_payload(
     }
     bounced_emails.discard("mailer-daemon@googlemail.com")
 
-    mail_histories = MailHistory.objects.filter(message_id__in=reference_ids)
+    mail_histories = MailHistory.objects.filter(message_id=reply_id)
     if bounced_emails:
         mail_histories = mail_histories.filter(main_target_mail__in=bounced_emails)
 
@@ -345,9 +345,9 @@ def _mark_bounced_messages_from_payload(
     )
     if updated_count:
         logger.info(
-            "Marked %s bounced message(s) as ERROR for references=%s",
+            "Marked %s bounced message(s) as ERROR for reply_id=%s",
             updated_count,
-            reference_ids,
+            reply_id,
         )
     return updated_count
 
@@ -451,8 +451,7 @@ def crawl_mail_account_task(self, account_id: str) -> dict:
     account_email = (account.email or "").lower().strip()
     mail = None
     try:
-        # password = decrypt_password(account.password_app or "")
-        password = account.password_app or ""
+        password = _resolve_account_password(account)
         mail = imaplib.IMAP4_SSL("imap.gmail.com")
         mail.login(account_email, password)
 

@@ -394,6 +394,8 @@ class CompanyFunding(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)
 
+    news_url = models.URLField(max_length=1000, blank=True, null=True)
+
     class Meta:
         db_table = "Funding"
         indexes = [
@@ -446,7 +448,7 @@ class LinkedinPersonalEmail(models.Model):
     linkedin_url = models.URLField(max_length=200, blank=True, null=True)
     twitter_url = models.URLField(max_length=200, blank=True, null=True)
     avatar_linkedin_url = models.TextField(blank=True, null=True)
-    role = models.CharField(max_length=200, blank=True, null=True)
+    role = models.CharField(max_length=700, blank=True, null=True)
     company = models.ForeignKey(
         LinkedinCompany, on_delete=models.CASCADE, blank=True, null=True
     )
