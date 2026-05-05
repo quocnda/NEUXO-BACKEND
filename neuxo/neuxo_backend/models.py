@@ -183,7 +183,9 @@ class MasterCompanies(models.Model):
     trigger = models.JSONField(default=list, blank=True, null=True)
     contact = models.BooleanField(default=False)
     funding_amount = models.TextField(blank=True, null=True)
-    score = models.FloatField(blank=True, null=True)
+    total_score = models.FloatField(blank=True, null=True)
+    trigger_score = models.FloatField(blank=True, null=True)
+    recommendation_score = models.FloatField(blank=True, null=True)
 
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)
