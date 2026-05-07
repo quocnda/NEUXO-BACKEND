@@ -398,6 +398,12 @@ def previewEmail(request: HttpRequest) -> JsonResponse:
 @extend_schema(
     parameters=[
         *PARAMETERS,
+        OpenApiParameter(
+            name="email",
+            description="Target email for conversation details",
+            type=str,
+            required=True,
+        ),
     ],
     responses={"200": "Success"},
     auth=None,
@@ -416,7 +422,7 @@ def getMailConversation(request: HttpRequest) -> JsonResponse:
 
     try:
         user_id = getUserID(request)
-        target_mail = request.GET.get("target_mail", None)
+        target_mail = request.GET.get("email", None)
         page = int(request.GET.get("page", 1))
         limit = int(request.GET.get("limit", 50))
 

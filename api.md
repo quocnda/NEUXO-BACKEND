@@ -63,14 +63,6 @@ Response 200
 }
 ```
 
-### GET /matching-companies/all-sales
-Response 200
-```json
-{
-    "message": "Success",
-    "data": ["Alice", "Bob", "None"]
-}
-```
 
 ### GET /matching-companies/listCountryCompany
 Response 200
