@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import extend_schema
+from pydantic import ValidationError
 from rest_framework.decorators import api_view
 from rest_framework.status import (
     HTTP_200_OK,
@@ -14,6 +15,11 @@ from neuxo_backend.controller.blacklist_controller import (
     addToBlacklist,
     getBlacklistData,
     removeFromBlacklist,
+)
+from neuxo_backend.dto.blacklist_dto import (
+    BlacklistGetResponse,
+    BlacklistIdsRequest,
+    MessageResponse,
 )
 
 from neuxo_backend.services import PARAMETERS
@@ -39,20 +45,22 @@ def addBlackList(request: HttpRequest) -> JsonResponse:
         return JsonResponse(
             {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
         )
-    data = request.data
-    lst_id = data.get("ids")
-    if not lst_id:
+    try:
+        payload = BlacklistIdsRequest.model_validate(request.data)
+    except ValidationError as exc:
         return JsonResponse(
-            {"message": "Company ids are required"}, status=HTTP_400_BAD_REQUEST
-        )
-    ids = lst_id.split(",")
-    not_found = addToBlacklist(ids)
-    if not_found:
-        return JsonResponse(
-            {"message": f"Companies not found: {', '.join(not_found)}"},
+            {"message": "Invalid payload", "errors": exc.errors()},
             status=HTTP_400_BAD_REQUEST,
         )
-    return JsonResponse({"message": "Success"}, status=HTTP_200_OK)
+    ids = payload.ids
+    not_found = addToBlacklist(ids)
+    if not_found:
+        response = MessageResponse(
+            message=f"Companies not found: {', '.join(not_found)}"
+        )
+        return JsonResponse(response.model_dump(), status=HTTP_400_BAD_REQUEST)
+    response = MessageResponse(message="Success")
+    return JsonResponse(response.model_dump(), status=HTTP_200_OK)
 
 
 # ---------------------------------------- removeBlacklist ---------------------------------------- #
@@ -74,20 +82,22 @@ def removeBlacklist(request: HttpRequest) -> JsonResponse:
         return JsonResponse(
             {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
         )
-    data = request.data
-    lst_id = data.get("ids")
-    if not lst_id:
+    try:
+        payload = BlacklistIdsRequest.model_validate(request.data)
+    except ValidationError as exc:
         return JsonResponse(
-            {"message": "Company ids are required"}, status=HTTP_400_BAD_REQUEST
-        )
-    ids = lst_id.split(",")
-    not_found = removeFromBlacklist(ids)
-    if not_found:
-        return JsonResponse(
-            {"message": f"Companies not found: {', '.join(not_found)}"},
+            {"message": "Invalid payload", "errors": exc.errors()},
             status=HTTP_400_BAD_REQUEST,
         )
-    return JsonResponse({"message": "Success"}, status=HTTP_200_OK)
+    ids = payload.ids
+    not_found = removeFromBlacklist(ids)
+    if not_found:
+        response = MessageResponse(
+            message=f"Companies not found: {', '.join(not_found)}"
+        )
+        return JsonResponse(response.model_dump(), status=HTTP_400_BAD_REQUEST)
+    response = MessageResponse(message="Success")
+    return JsonResponse(response.model_dump(), status=HTTP_200_OK)
 
 
 # ---------------------------------------- getBlacklist ---------------------------------------- #
@@ -110,12 +120,10 @@ def getBlacklist(request: HttpRequest) -> JsonResponse:
             {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
         )
     paginator, data, showing_columns = getBlacklistData(request)
-    return JsonResponse(
-        {
-            "message": "Success",
-            "meta": {"columns": showing_columns},
-            "pagination": paginator,
-            "data": data,
-        },
-        status=HTTP_200_OK,
+    response = BlacklistGetResponse(
+        message="Success",
+        meta={"columns": showing_columns},
+        pagination=paginator,
+        data=data,
     )
+    return JsonResponse(response.model_dump(), status=HTTP_200_OK)

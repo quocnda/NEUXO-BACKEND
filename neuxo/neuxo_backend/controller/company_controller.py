@@ -112,7 +112,7 @@ def getDataCompany(request):
             "trigger": company["trigger"],
             "trigger_time": company["trigger_time"].strftime("%Y-%m-%d"),
             "updated_at": company["updated_at"].strftime("%Y-%m-%d"),
-            "funding_amount": float(company["funding_amount"]),
+            "funding_amount": company["funding_amount"],
             "contacts": company["contact"],
             "company_size": company["company__size"],
             "category": company["company__category"],

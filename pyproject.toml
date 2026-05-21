@@ -146,6 +146,9 @@ dependencies = [
   "beautifulsoup4",
   "apify-client",
   "pytest-django",
+  "elasticsearch==8.13.0",
+  "sentence-transformers==3.0.1",
+  "webdriver-manager",
 ]
 [dependency-groups]
 dev = [

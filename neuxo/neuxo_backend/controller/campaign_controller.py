@@ -6,12 +6,22 @@ Handles email campaign/sequence related business logic
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from django.db.models import Count, F, Q
 from django.utils import timezone
 
 from neuxo_backend.models import MailHistory, SequenceEmail, SequenceEmailStep
+from neuxo_backend.dto.campaign_dto import (
+    CampaignAboutData,
+    CampaignDetailData,
+    CampaignDetailPagination,
+    CampaignDetailStatistics,
+    CampaignEmailDetail,
+    CampaignListItem,
+    CampaignPagination,
+    MessageResponse,
+)
 
 
 def get_campaigns(
@@ -22,7 +32,7 @@ def get_campaigns(
     end_date: Optional[datetime] = None,
     campaign_status: Optional[str] = None,
     search_key: Optional[str] = None,
-) -> Tuple[Dict, List[Dict]]:
+) -> Tuple[CampaignPagination, List[CampaignListItem]]:
     """
     Get all campaigns with statistics for a user
     """
@@ -135,7 +145,10 @@ def get_campaigns(
         "total_item": total_count,
     }
 
-    return pagination, results
+    normalized_pagination = CampaignPagination.model_validate(pagination)
+    normalized_items = [CampaignListItem.model_validate(item) for item in results]
+
+    return normalized_pagination, normalized_items
 
 
 def update_campaign_status(
@@ -193,11 +206,11 @@ def get_campaign_details(
     page: int = 1,
     limit: int = 50,
     email_status: Optional[str] = None,
-) -> Tuple[bool, Dict]:
+) -> Tuple[bool, CampaignDetailData | MessageResponse]:
     """Get detailed campaign information"""
     campaign = SequenceEmail.objects.filter(id=campaign_id, user_id=user_id).first()
     if not campaign:
-        return False, {"message": "Campaign not found"}
+        return False, MessageResponse(message="Campaign not found")
 
     # Status display
     status_display = campaign.sequence_status
@@ -244,7 +257,7 @@ def get_campaign_details(
     total_opened = sent_emails.filter(emailtracker__opened=True).count()
 
     # Get per-email statistics
-    email_details = []
+    email_details: list[CampaignEmailDetail] = []
     for target in email_targets:
         target_email = target.get("email", "") if isinstance(target, dict) else target
 
@@ -269,24 +282,38 @@ def get_campaign_details(
         )
 
         email_details.append(
-            {
-                "email": target_email,
-                "sent_count": sent_count,
-                "reply_count": reply_count,
-                "opened_count": opened_count,
-                "status": status,
-            }
+            CampaignEmailDetail(
+                email=target_email,
+                sent_count=sent_count,
+                reply_count=reply_count,
+                opened_count=opened_count,
+                status=status,
+            )
         )
 
     # Apply email status filter
     if email_status:
         status_list = email_status.split(",")
-        email_details = [e for e in email_details if e["status"] in status_list]
+        email_details = [e for e in email_details if e.status in status_list]
 
     # Pagination
     total_emails = len(email_details)
     start_idx = (page - 1) * limit
     paginated_emails = email_details[start_idx : start_idx + limit]
+
+    statistics = CampaignDetailStatistics(
+        total_targets=len(email_targets),
+        total_sent=total_sent,
+        total_received=total_received,
+        total_opened=total_opened,
+        total_error=total_error,
+    )
+
+    pagination = CampaignDetailPagination(
+        page=page,
+        total_page=(total_emails // limit) + (1 if total_emails % limit > 0 else 0),
+        total_item=total_emails,
+    )
 
     result = {
         "campaign_id": str(campaign.id),
@@ -300,32 +327,23 @@ def get_campaign_details(
         "end_date": campaign.end_date.strftime("%Y-%m-%d %H:%M:%S")
         if campaign.end_date
         else None,
-        "statistics": {
-            "total_targets": len(email_targets),
-            "total_sent": total_sent,
-            "total_received": total_received,
-            "total_opened": total_opened,
-            "total_error": total_error,
-        },
-        "pagination": {
-            "page": page,
-            "total_page": (total_emails // limit)
-            + (1 if total_emails % limit > 0 else 0),
-            "total_item": total_emails,
-        },
+        "statistics": statistics,
+        "pagination": pagination,
         "email_details": paginated_emails,
     }
 
-    return True, result
+    return True, CampaignDetailData.model_validate(result)
 
 
-def get_campaign_about(campaign_id: str, user_id: int) -> Tuple[bool, Dict]:
+def get_campaign_about(
+    campaign_id: str, user_id: int
+) -> Tuple[bool, CampaignAboutData | MessageResponse]:
     """Get campaign about info"""
     campaign = SequenceEmail.objects.filter(id=campaign_id, user_id=user_id).first()
     if not campaign:
-        return False, {"message": "Campaign not found"}
+        return False, MessageResponse(message="Campaign not found")
 
-    return True, {
+    result = {
         "campaign_id": str(campaign.id),
         "campaign_name": campaign.campaign_name,
         "sequence_name": campaign.sequence_name,
@@ -342,6 +360,8 @@ def get_campaign_about(campaign_id: str, user_id: int) -> Tuple[bool, Dict]:
         "enable_bimonthly_send": campaign.enable_bimonthly_send,
         "max_email_bimonthly": campaign.max_email_bimonthly,
     }
+
+    return True, CampaignAboutData.model_validate(result)
 
 
 def edit_campaign_name(campaign_id: str, user_id: int, new_name: str) -> bool:
