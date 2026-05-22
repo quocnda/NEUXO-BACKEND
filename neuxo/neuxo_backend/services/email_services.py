@@ -958,17 +958,18 @@ def setFollowUpDateForReplied(request: HttpRequest) -> JsonResponse:
 @api_view(["POST"])
 @requireLogin
 def submitSequenceEmail(request: HttpRequest) -> JsonResponse:
+    print("---------->>> Start submitSequenceEmail")
     """Persist submitted sequence content and enqueue background processing."""
     if request.method != "POST":
         return JsonResponse(
             {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
         )
-
+    print("---------->>> Passed method check")
     try:
         user_id = getUserID(request)
         data = request.data
         sequence_id = data.get("sequence_id")
-
+        print("---------->>> Got sequence_id:", sequence_id)
         if not sequence_id:
             return JsonResponse(
                 {"message": "Please provide sequence_id"},
@@ -976,18 +977,20 @@ def submitSequenceEmail(request: HttpRequest) -> JsonResponse:
             )
 
         content_emails = data.get("content_email", [])
+        print("---------->>> Got content_emails:", content_emails)
         if not content_emails:
             return JsonResponse(
                 {"message": "Please provide content_email"},
                 status=HTTP_400_BAD_REQUEST,
             )
-
+        print("---------->>> Passed content_email check")
         result = submit_sequence_email(
             user_id=user_id,
             sequence_id=sequence_id,
             content_emails=content_emails,
             event_id=data.get("event_id"),
         )
+        print("---------->>> OK For submit_sequence_email")
 
         transaction.on_commit(lambda: enqueue_sequence_processing.delay(sequence_id))
 

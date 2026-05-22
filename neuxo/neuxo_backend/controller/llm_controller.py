@@ -12,7 +12,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
-from openai import OpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
 
 from neuxo_backend.controller.prompt_engine import (
     get_company_preview_prompts,
@@ -50,11 +51,16 @@ def _get_sender_display_name(user: Users) -> str:
     return full_name or user.user_name or user.email or "NEUXO"
 
 
-def _get_openai_client() -> OpenAI:
+def _get_openai_client() -> ChatOpenAI:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise ValueError("OPENAI_API_KEY environment variable not set")
-    return OpenAI(api_key=api_key)
+    return ChatOpenAI(
+        api_key=api_key,
+        model=DEFAULT_OPENAI_MODEL,
+        temperature=0.0,
+        model_kwargs={"response_format": {"type": "json_object"}},
+    )
 
 
 def _extract_json_from_response(content: str) -> Dict[str, Any]:
@@ -69,16 +75,14 @@ def _call_json_llm(
     system_prompt: str, user_prompt: str, temperature: float = 0.3
 ) -> Dict[str, Any]:
     client = _get_openai_client()
-    response = client.chat.completions.create(
-        model=DEFAULT_OPENAI_MODEL,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
+    response = client.invoke(
+        [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt),
         ],
         temperature=temperature,
-        response_format={"type": "json_object"},
     )
-    content = response.choices[0].message.content or "{}"
+    content = response.content or "{}"
     return _extract_json_from_response(content)
 
 

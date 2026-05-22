@@ -941,5 +941,6 @@ def process_sequence_task(self, sequence_id: str) -> dict:
 
 @shared_task
 def enqueue_sequence_processing(sequence_id: str) -> dict:
+    print("============>>> Start to queue")
     process_sequence_task.delay(sequence_id)
     return {"status": "queued", "sequence_id": sequence_id}

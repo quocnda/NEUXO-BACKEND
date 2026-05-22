@@ -877,17 +877,17 @@ def submit_sequence_email(
     if bulk_create_email:
         SequenceEmailStepHistory.objects.bulk_create(bulk_create_email)
 
-    missing_emails = list(set(_get_sequence_target_emails(sequence)) - provided_emails)
-    if missing_emails:
-        ensure_sequence_step_content_generated(
-            sequence_id=sequence_id,
-            step_ids=[str(step.id) for step in steps.values()],
-            recipient_emails=missing_emails,
-            user=sequence.user,
-            source=sequence.source,
-            event_id=event_id or sequence.event_id,
-            persist_step_history=True,
-        )
+    # missing_emails = list(set(_get_sequence_target_emails(sequence)) - provided_emails)
+    # if missing_emails:
+    #     ensure_sequence_step_content_generated(
+    #         sequence_id=sequence_id,
+    #         step_ids=[str(step.id) for step in steps.values()],
+    #         recipient_emails=missing_emails,
+    #         user=sequence.user,
+    #         source=sequence.source,
+    #         event_id=event_id or sequence.event_id,
+    #         persist_step_history=True,
+    #     )
 
     sequence.sequence_status = "PROCESSING"
     if event_id:
