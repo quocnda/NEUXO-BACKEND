@@ -41,6 +41,7 @@ from users.utils.utils import requireLogin
 @api_view(["PUT"])
 @requireLogin
 def addBlackList(request: HttpRequest) -> JsonResponse:
+    print("addBlackList called")
     if request.method != "PUT":
         return JsonResponse(
             {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED

@@ -6,12 +6,20 @@ from neuxo_backend.controller.utils import (
     getShowingColumns,
 )
 from neuxo_backend.models import MasterCompanies, ShowingField
+from neuxo_backend.dto.company_dto import (
+    MatchingCompanyItem,
+    MatchingCompanyPagination,
+    ShowingColumn,
+    UpdateShowingColumnItem,
+)
 from django.db import models
 from django.db.models import Q
 from users.models import UserWatchList
 
 
-def getDataCompany(request):
+def getDataCompany(
+    request,
+) -> tuple[MatchingCompanyPagination, list[MatchingCompanyItem], list[ShowingColumn]]:
     search_key = request.GET.get("search_key", None)
     companies = MasterCompanies.objects.all().order_by(("-company__created_at"))
     print("Total LEN COMPANIES:", companies.count())
@@ -174,15 +182,23 @@ def getDataCompany(request):
         "total_item": total_count,
     }
 
-    return paginator, companies, showing_columns
+    normalized_pagination = MatchingCompanyPagination.model_validate(paginator)
+    normalized_items = [MatchingCompanyItem.model_validate(item) for item in companies]
+    normalized_columns = [
+        ShowingColumn.model_validate(item) for item in showing_columns
+    ]
+
+    return normalized_pagination, normalized_items, normalized_columns
 
 
-def updateShowingColumnsData(userId, name_columns_and_status: list[dict]):
+def updateShowingColumnsData(
+    userId, name_columns_and_status: list[UpdateShowingColumnItem]
+):
     count = 0
     for column in name_columns_and_status:
         count += 1
-        is_show = "YES" if column.get("is_show") else "NO"
-        ShowingField.objects.filter(name_columns=column["name"], user_id=userId).update(
+        is_show = "YES" if column.is_show else "NO"
+        ShowingField.objects.filter(name_columns=column.name, user_id=userId).update(
             is_show=is_show, order_by=count
         )
     return getShowingColumns(userId)

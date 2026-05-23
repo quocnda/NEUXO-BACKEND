@@ -1067,6 +1067,7 @@ def signInGoogle(request):
 def signUp(request):
     if request.method == "POST":
         try:
+            print("REQUEST DATA: ", request.data)
             email = request.data.get("email")
             username = request.data.get("username", None)
             password = request.data.get("password")
@@ -1092,7 +1093,7 @@ def signUp(request):
             pwd_sha256 = encodeToSha256(password)
             with transaction.atomic():
                 newUser = Users.objects.create(
-                    username=username if username else email.split("@")[0],
+                    user_name=username if username else email.split("@")[0],
                     email=email,
                     pwd_sha256=pwd_sha256,
                     role="User",

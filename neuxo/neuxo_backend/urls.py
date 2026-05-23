@@ -2,16 +2,12 @@ from django.urls import path  # noqa: F401
 
 from neuxo_backend.services import (
     blacklist_services,
-    campaign_services,
     company_details_services,
     company_services,
     custom_filter_services,
     email_services,
     event_services,
-    funding_services,
-    gen_email_services,
     job_services,
-    tracker_services,
     watchlist_services,
 )
 
@@ -53,7 +49,7 @@ urlpatterns = [
     ),
     # Blacklist
     path(
-        "matching-companies/addBlackList",
+        "matching-companies/addBlackList/",
         blacklist_services.addBlackList,
         name="add_blacklist",
     ),
@@ -107,6 +103,11 @@ urlpatterns = [
         "companies/contact/<str:contact_id>/updateEmail/<str:id>",
         company_details_services.updateEmailForContact,
         name="update_email_for_contact",
+    ),
+    path(
+        "company/addNoteCompanyFromUser",
+        company_services.addNoteCompanyFromUser,
+        name="add_note_company_from_user",
     ),
     path(
         "getEventsByCompanyID/<str:id>",
@@ -219,27 +220,6 @@ urlpatterns = [
         "events/download/guests",
         event_services.downloadGuests,
         name="download_guests",
-    ),
-    # ----------------------------- Funding -----------------------------------#
-    path(
-        "funding/list",
-        funding_services.getFundings,
-        name="get_fundings",
-    ),
-    path(
-        "funding/metadata",
-        funding_services.getMetaData,
-        name="get_funding_metadata",
-    ),
-    path(
-        "funding/<str:id>",
-        funding_services.getFundingByID,
-        name="get_funding_by_id",
-    ),
-    path(
-        "funding/download",
-        funding_services.downloadFunding,
-        name="download_funding",
     ),
     # ----------------------------- Watchlist -----------------------------------#
     path(
@@ -522,37 +502,6 @@ urlpatterns = [
         email_services.checkEmailSent,
         name="check_email_sent",
     ),
-    # ----------------------------- Campaign Management -----------------------------------#
-    path(
-        "campaign/email/get-report",
-        campaign_services.getCampaignStatic,
-        name="get_campaign_static",
-    ),
-    path(
-        "campaign/email/updateStatus/<str:id>",
-        campaign_services.updateStatusCampaign,
-        name="update_status_campaign",
-    ),
-    path(
-        "campaign/email/get-detail-static/<str:id>",
-        campaign_services.getDetailCampaign,
-        name="get_detail_campaign",
-    ),
-    path(
-        "campaign/email/get-about/<str:id>",
-        campaign_services.getAboutCampaign,
-        name="get_about_campaign",
-    ),
-    path(
-        "campaign/email/get-total-report-mail",
-        campaign_services.getAllEmailStaticByAdmin,
-        name="get_all_email_static_by_admin",
-    ),
-    path(
-        "campaign/email/edit-name-campaign/<str:id>",
-        campaign_services.editNameCampaign,
-        name="edit_name_campaign",
-    ),
     # ----------------------------- Custom Filter -----------------------------------#
     path(
         "customFilter/list",
@@ -568,42 +517,5 @@ urlpatterns = [
         "customFilter/save",
         custom_filter_services.saveCustomFilter,
         name="save_custom_filter",
-    ),
-    # ----------------------------- Email Tracking -----------------------------------#
-    path(
-        "email/tracking/<str:tracking_id>",
-        tracker_services.email_tracking_pixel,
-        name="email_tracking_pixel",
-    ),
-    path(
-        "email/tracking/stats",
-        tracker_services.email_tracking_stats,
-        name="email_tracking_stats",
-    ),
-    path(
-        "logging",
-        tracker_services.logging,
-        name="tracker_logging",
-    ),
-    # ----------------------------- Gen-Email (AI) -----------------------------------#
-    path(
-        "gen-email/generate",
-        gen_email_services.generateEmail,
-        name="generate_email",
-    ),
-    path(
-        "gen-email/generate-bulk",
-        gen_email_services.generateBulkEmails,
-        name="generate_bulk_emails",
-    ),
-    path(
-        "gen-email/validate",
-        gen_email_services.validateEmailContent,
-        name="validate_email_content",
-    ),
-    path(
-        "gen-email/types",
-        gen_email_services.getEmailTypes,
-        name="get_email_types",
     ),
 ]
