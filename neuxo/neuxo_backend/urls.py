@@ -19,11 +19,11 @@ urlpatterns = [
         company_services.getMatchingCompany,
         name="get_matching_companies",
     ),
-    path(
-        "matching-companies/all-sales",
-        company_services.getAllSales,
-        name="get_all_sales",
-    ),
+    # path(
+    #     "matching-companies/all-sales",
+    #     company_services.getAllSales,
+    #     name="get_all_sales",
+    # ),
     path(
         "matching-companies/listCountryCompany",
         company_services.listCountryCompany,

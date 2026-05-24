@@ -688,12 +688,12 @@ class HistoryGenAI(models.Model):
 # ----------------------------------- Sales Person -----------------------------------#
 
 
-class SalesPerson(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=100)
+# class SalesPerson(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     name = models.CharField(max_length=100)
 
-    class Meta:
-        db_table = "User_Sales"
+#     class Meta:
+#         db_table = "User_Sales"
 
 
 # ----------------------------------- Custom Filter -----------------------------------#

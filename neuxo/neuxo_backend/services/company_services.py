@@ -20,7 +20,7 @@ from neuxo_backend.controller.company_details_controller import (
 from users.utils.utils import requireLogin
 from neuxo_backend.services import PARAMETERS
 from neuxo_backend.controller.utils import getShowingColumns, getShowingColumnsCustom
-from neuxo_backend.models import LinkedinCompany, SalesPerson
+from neuxo_backend.models import LinkedinCompany
 from neuxo_backend.dto.company_dto import (
     AddCompanyNoteRequest,
     AddCompanyNoteResponse,
@@ -32,7 +32,6 @@ from neuxo_backend.dto.company_dto import (
     MatchingCompanyMeta,
     MatchingCompanyResponse,
     MessageResponse,
-    SalesListResponse,
     ShowingColumn,
     UpdateShowingColumnsData,
     UpdateShowingColumnsRequest,
@@ -110,27 +109,27 @@ def getMatchingCompany(request: HttpRequest) -> JsonResponse:
     return JsonResponse(response.model_dump(), status=HTTP_200_OK)
 
 
-@extend_schema(
-    parameters=[],
-    responses={200: SalesListResponse},
-    auth=None,
-    operation_id="GET_AllSales",
-    tags=["Matching"],
-    operation=None,
-)
-@csrf_exempt
-@api_view(["GET"])
-@requireLogin
-def getAllSales(request: HttpRequest) -> JsonResponse:
-    if request.method != "GET":
-        response = MessageResponse(message="Invalid request method")
-        return JsonResponse(response.model_dump(), status=HTTP_405_METHOD_NOT_ALLOWED)
+# @extend_schema(
+#     parameters=[],
+#     responses={200: SalesListResponse},
+#     auth=None,
+#     operation_id="GET_AllSales",
+#     tags=["Matching"],
+#     operation=None,
+# )
+# @csrf_exempt
+# @api_view(["GET"])
+# @requireLogin
+# def getAllSales(request: HttpRequest) -> JsonResponse:
+#     if request.method != "GET":
+#         response = MessageResponse(message="Invalid request method")
+#         return JsonResponse(response.model_dump(), status=HTTP_405_METHOD_NOT_ALLOWED)
 
-    sales_data = list(SalesPerson.objects.all().values_list("name", flat=True))
-    sales_data.append("None")
+#     sales_data = list(SalesPerson.objects.all().values_list("name", flat=True))
+#     sales_data.append("None")
 
-    response = SalesListResponse(message="Success", data=sales_data)
-    return JsonResponse(response.model_dump(), status=HTTP_200_OK)
+#     response = SalesListResponse(message="Success", data=sales_data)
+#     return JsonResponse(response.model_dump(), status=HTTP_200_OK)
 
 
 # ---------------------------------------- listCountryCompany ---------------------------------------- #

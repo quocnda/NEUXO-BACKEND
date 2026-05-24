@@ -122,13 +122,6 @@ class MatchingCompanyResponse(BaseModel):
     data: list[MatchingCompanyItem]
 
 
-class SalesListResponse(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    message: str
-    data: list[str]
-
-
 class CountryCompanyData(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
