@@ -30,7 +30,6 @@ from neuxo_backend.controller.watchlist_controller import (
     get_detail_info_for_company,
     get_list_icp,
     get_mention_per_people,
-    get_watchlist_by_user_team,
     get_watchlist_data,
     getParamsVer2,
     new_notify_today,
@@ -43,7 +42,6 @@ from neuxo_backend.controller.watchlist_controller import (
     update_company,
     update_contact,
 )
-from users.models import Users
 from users.utils.utils import requireLogin, requireRoles
 
 
@@ -254,101 +252,6 @@ def getWatchListForAdmin(request, id):
             "message": "Success",
             "pagination": paginator,
             "data": data,
-        },
-        status=HTTP_200_OK,
-    )
-
-
-# ---------------------------------------- getAllWatchlistOfMemberForAdmin ---------------------------------------- #
-
-
-@extend_schema(
-    parameters=[
-        OpenApiParameter(
-            name="search_key", description="find keyword", required=False, type=str
-        ),
-        OpenApiParameter(
-            name="list_icp", description="list_icp", required=False, type=str
-        ),
-        OpenApiParameter(
-            name="list_user_id", description="list_user_id", required=False, type=str
-        ),
-        OpenApiParameter(
-            name="page",
-            description="Page",
-            required=False,
-            type=int,
-            examples=[OpenApiExample("1", value="1")],
-        ),
-        OpenApiParameter(
-            name="limit",
-            description="Page Size",
-            required=False,
-            type=int,
-            examples=[OpenApiExample("10", value="10")],
-        ),
-    ],
-    responses={"200": "Success"},
-    auth=None,
-    operation_id="GET_GetAllWatchlistOfMember",
-    tags=["Admin seen watchlist"],
-    operation=None,
-)
-@csrf_exempt
-@api_view(["GET"])
-@requireLogin
-@requireRoles(["Admin", "Super_Admin"])
-def getAllWatchlistOfMemberForAdmin(request: HttpRequest) -> JsonResponse:
-    if request.method != "GET":
-        return JsonResponse(
-            {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
-        )
-    admin_id = request.user.get("id", None)
-    search_key = request.GET.get("search_key", None)
-    list_icp = request.GET.get("list_icp", None)
-    listUserId = request.GET.get("list_user_id", None)
-    page = int(request.GET.get("page", 1))
-    limit = int(request.GET.get("limit", 50))
-
-    if listUserId:
-        listUserId = listUserId.split(",")
-        listUserId = [uuid_str.replace("-", "") for uuid_str in listUserId]
-    else:
-        listUserId = (
-            Users.objects.filter(group="Var-meta")
-            .exclude(id=admin_id)
-            .values_list("id", flat=True)
-        )
-
-    if list_icp:
-        list_icp = list_icp.split(",")
-
-    data = get_watchlist_by_user_team(list_icp, search_key, listUserId)
-
-    if len(data) == 0:
-        return JsonResponse(
-            {
-                "message": "Success",
-                "pagination": {
-                    "page": 1,
-                    "total_page": 1,
-                    "total_item": 0,
-                },
-                "data": [],
-            },
-            status=HTTP_200_OK,
-        )
-    response_data = list(data)[page * limit - limit : page * limit]
-
-    return JsonResponse(
-        {
-            "message": "Success",
-            "pagination": {
-                "page": page,
-                "total_page": len(list(data)) // limit + 1,
-                "total_item": len(list(data)),
-            },
-            "data": response_data,
         },
         status=HTTP_200_OK,
     )

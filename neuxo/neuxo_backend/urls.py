@@ -182,7 +182,7 @@ urlpatterns = [
         name="get_event_by_id",
     ),
     path(
-        "events/<str:id>/guests",
+        "events/guests/list",
         event_services.getEventGuests,
         name="get_event_guests",
     ),
@@ -205,16 +205,6 @@ urlpatterns = [
         "events/company-link/<str:id>",
         event_services.getCompanyLinkToEvent,
         name="get_company_link_to_event",
-    ),
-    path(
-        "events/download",
-        event_services.downloadEvents,
-        name="download_events",
-    ),
-    path(
-        "events/download/companies",
-        event_services.downloadCompanyInEvents,
-        name="download_company_in_events",
     ),
     path(
         "events/download/guests",
@@ -392,11 +382,6 @@ urlpatterns = [
         "admin/watchlist/mention/<str:id>",
         watchlist_services.getAllMentionedCompanyPerAdmin,
         name="get_all_mentioned_company_per_admin",
-    ),
-    path(
-        "admin/watchlist/all-member",
-        watchlist_services.getAllWatchlistOfMemberForAdmin,
-        name="get_all_watchlist_of_member_for_admin",
     ),
     path(
         "admin/watchlist/<str:id>/list",

@@ -3,10 +3,6 @@ from __future__ import annotations
 from io import BytesIO
 
 import pandas as pd
-from django.db import models
-from django.db.models import F
-from django.db.models.functions import Cast, Concat
-from django.db.models import Value
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -26,8 +22,8 @@ from neuxo_backend.controller.event_controller import (
     get_list_country_and_parent_event,
     update_guest_email,
     update_guest_note,
+    get_guests_by_event,
 )
-from neuxo_backend.models import EventsList, GuestList
 from neuxo_backend.services import PARAMETERS
 from users.utils.utils import requireLogin
 
@@ -133,6 +129,7 @@ def getEvents(request: HttpRequest) -> JsonResponse:
 @api_view(["GET"])
 @requireLogin
 def getListCountryAndParentEvent(request: HttpRequest) -> JsonResponse:
+    print("=========>>>  getListCountryAndParentEvent called")
     """Get list of countries and parent events for filtering."""
     if request.method != "GET":
         return JsonResponse(
@@ -441,139 +438,6 @@ def getCompanyLinkToEvent(request: HttpRequest, id: str) -> JsonResponse:
         return JsonResponse({"message": str(e)}, status=HTTP_400_BAD_REQUEST)
 
 
-# ---------------------------------------- downloadEvents ---------------------------------------- #
-
-
-@extend_schema(
-    parameters=PARAMETERS,
-    responses={"200": "Success"},
-    auth=None,
-    operation_id="GET_DownloadEvents",
-    tags=["Event"],
-    operation=None,
-)
-@csrf_exempt
-@api_view(["GET"])
-@requireLogin
-def downloadEvents(request: HttpRequest) -> HttpResponse:
-    """Download events data as Excel file."""
-    if request.method != "GET":
-        return JsonResponse(
-            {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
-        )
-
-    try:
-        excel_file = BytesIO()
-
-        LIST_FIELDS = [
-            "id",
-            "name",
-            "full_event_url",
-            "full_start_date",
-            "full_created_at",
-            "location",
-            "country",
-            "event_parent",
-            "companies",
-            "guests",
-        ]
-
-        main_data = EventsList.objects.filter(number_of_company__gt=0)
-        main_data = (
-            main_data.annotate(
-                full_event_url=Concat(
-                    Value("https://lu.ma/"),
-                    F("event_url"),
-                    output_field=models.CharField(),
-                ),
-                full_created_at=Cast(F("created_at"), output_field=models.DateField()),
-                full_start_date=Cast(F("start_date"), output_field=models.DateField()),
-                companies=Cast(F("number_of_company"), output_field=models.CharField()),
-                guests=Cast(F("number_of_guest"), output_field=models.CharField()),
-            )
-            .values(*LIST_FIELDS)
-            .order_by("-start_date")
-        )
-
-        result = [
-            {
-                **data,
-                "event_url": data.pop("full_event_url"),
-                "start_date": data.pop("full_start_date"),
-                "created_at": data.pop("full_created_at"),
-            }
-            for data in main_data
-        ]
-
-        response_data = pd.DataFrame(result)
-
-        # Convert timezone-aware datetime columns
-        for col in response_data.select_dtypes(
-            include=["datetime64[ns, UTC]", "datetime64[ns]"]
-        ):
-            response_data[col] = pd.to_datetime(response_data[col]).dt.tz_localize(None)
-
-        response_data.to_excel(excel_file, index=False, engine="openpyxl")
-        excel_file.seek(0)
-
-        response = HttpResponse(
-            excel_file,
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-        response["Content-Disposition"] = 'attachment;filename="Events.xlsx"'
-
-        return response
-    except Exception as e:
-        return JsonResponse(
-            {"message": "Download failed", "exception": str(e)},
-            status=HTTP_400_BAD_REQUEST,
-        )
-
-
-# ---------------------------------------- downloadCompanyInEvents ---------------------------------------- #
-
-
-@extend_schema(
-    parameters=[],
-    responses={"200": "Success"},
-    auth=None,
-    operation_id="GET_DownloadCompanyInEvents",
-    tags=["Event"],
-    operation=None,
-)
-@csrf_exempt
-@api_view(["GET"])
-@requireLogin
-def downloadCompanyInEvents(request: HttpRequest, id: str) -> HttpResponse:
-    """Download companies in an event as Excel file."""
-    if request.method != "GET":
-        return JsonResponse(
-            {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
-        )
-
-    try:
-        excel_file = BytesIO()
-
-        companies = get_company_link_to_event(id)
-        response_data = pd.DataFrame(companies)
-
-        response_data.to_excel(excel_file, index=False, engine="openpyxl")
-        excel_file.seek(0)
-
-        response = HttpResponse(
-            excel_file,
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-        response["Content-Disposition"] = 'attachment;filename="CompaniesInEvent.xlsx"'
-
-        return response
-    except Exception as e:
-        return JsonResponse(
-            {"message": "Download failed", "exception": str(e)},
-            status=HTTP_400_BAD_REQUEST,
-        )
-
-
 # ---------------------------------------- downloadGuests ---------------------------------------- #
 
 
@@ -597,35 +461,7 @@ def downloadGuests(request: HttpRequest) -> HttpResponse:
 
     try:
         excel_file = BytesIO()
-
-        start_date = request.GET.get("start_date", None)
-        end_date = request.GET.get("end_date", None)
-
-        LIST_FIELD = [
-            "name",
-            "linkedin_url",
-            "twitter_url",
-            "website",
-            "event__name",
-            "company__name",
-            "company__country",
-            "category",
-            "email",
-            "created_at",
-        ]
-
-        main_data = GuestList.objects.filter(company__isnull=False).annotate(
-            category=F("company__category")
-        )
-
-        if start_date and end_date:
-            if len(start_date) == 10:
-                start_date = start_date + " 00:00:00"
-            if len(end_date) == 10:
-                end_date = end_date + " 23:59:59"
-            main_data = main_data.filter(created_at__range=[start_date, end_date])
-
-        main_data = main_data.values(*LIST_FIELD)
+        main_data = get_guests_by_event(request)
 
         response_data = pd.DataFrame(list(main_data))
 
