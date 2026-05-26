@@ -927,7 +927,7 @@ def process_sequence_task(self, sequence_id: str) -> dict:
         if sent_count > 0:
             crawl_recent_sequence_mail_history_task.apply_async(
                 args=[sequence_id, str(account.id), sent_count],
-                countdown=3 * 60,
+                countdown=60,
             )
 
         return {
