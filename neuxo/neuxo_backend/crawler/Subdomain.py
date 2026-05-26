@@ -12,17 +12,24 @@ from neuxo_backend.models import (
 )
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 
 class Subdomains:
     def __init__(self) -> None:
-        chrome_options = webdriver.ChromeOptions()
+        chrome_options = Options()
         chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-cache")
-        driver = webdriver.Chrome(options=chrome_options)
+        service = Service(os.getenv("CHROME_DRIVER_PATH"), "/usr/bin/chromedriver")
+        driver = webdriver.Chrome(service=service, options=chrome_options)
         self.driver = driver
         # self.lst_subdomain_old = list(set(MentionsSubDomain.objects.values_list('sub_domain',flat=True)))
 
@@ -81,16 +88,8 @@ class Subdomains:
 
         time.sleep(2)
         soup = BeautifulSoup(driver.page_source, "html.parser")
-        with open("/home/quocnda/neuxo/page_source.html", "w", encoding="utf-8") as f:
-            f.write(driver.page_source)
 
         table = soup.find("table", class_="table")
-        if not table:
-            soup = BeautifulSoup(driver.page_source, "html.parser")
-            with open(
-                "/home/quocnda/neuxo/page_source_1.html", "w", encoding="utf-8"
-            ) as f:
-                f.write(driver.page_source)
         table_body = table.find("tbody")
 
         for tr in table_body.find_all("tr"):

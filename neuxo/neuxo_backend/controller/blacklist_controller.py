@@ -1,16 +1,26 @@
 from __future__ import annotations
 
+from typing import Any
+
 from django.db.models import OuterRef, Subquery
+from django.http import HttpRequest
 
 from neuxo_backend.controller.utils import (
     getFilterDataQueryForBlacklist,
     getParams,
     getShowingColumnsCustom,
 )
+from neuxo_backend.dto.blacklist_dto import (
+    BlacklistCompanyItem,
+    BlacklistExternal,
+    BlacklistPagination,
+)
 from neuxo_backend.models import LinkedinCompany, MasterCompanies
 
 
-def getBlacklistData(request):
+def getBlacklistData(
+    request: HttpRequest,
+) -> tuple[BlacklistPagination, list[BlacklistCompanyItem], list[Any]]:
     start_date, end_date, page, limit = getParams(request)
 
     sort_field_map = {
@@ -72,18 +82,24 @@ def getBlacklistData(request):
     paginated = list(main_data[offset : offset + limit])
 
     for data in paginated:
-        data["external"] = {
-            "linkedin": data["linkedin_url"],
-            "website": data["website"],
-            "twitter": data["link_twitter"],
-        }
+        data["external"] = BlacklistExternal(
+            linkedin=data.get("linkedin_url"),
+            website=data.get("website"),
+            twitter=data.get("link_twitter"),
+        )
         data["label"] = ", ".join(data["labels"]) if data["labels"] else ""
         data["company_size"] = data["size"]
         data["company_id"] = data["id"]
         data["company"] = data["name"]
         data["funding_amount"] = data["linkedin_funding_amt"]
-        data["created_at"] = data["created_at"].strftime("%Y-%m-%d")
-        data["updated_at"] = data["updated_at"].strftime("%Y-%m-%d")
+        if data.get("created_at"):
+            data["created_at"] = data["created_at"].strftime("%Y-%m-%d")
+        else:
+            data["created_at"] = None
+        if data.get("updated_at"):
+            data["updated_at"] = data["updated_at"].strftime("%Y-%m-%d")
+        else:
+            data["updated_at"] = None
 
         master = MasterCompanies.objects.filter(company_id=data["id"]).first()
         if master:
@@ -105,10 +121,13 @@ def getBlacklistData(request):
 
     showing_columns = getShowingColumnsCustom("Blacklist", request)
 
-    return paginator, paginated, showing_columns
+    normalized_pagination = BlacklistPagination.model_validate(paginator)
+    normalized_items = [BlacklistCompanyItem.model_validate(item) for item in paginated]
+
+    return normalized_pagination, normalized_items, showing_columns
 
 
-def addToBlacklist(ids: list[str]):
+def addToBlacklist(ids: list[str]) -> list[str]:
     not_found = []
     for company_id in ids:
         company = LinkedinCompany.objects.filter(id=company_id).first()
@@ -120,7 +139,7 @@ def addToBlacklist(ids: list[str]):
     return not_found
 
 
-def removeFromBlacklist(ids: list[str]):
+def removeFromBlacklist(ids: list[str]) -> list[str]:
     not_found = []
     for company_id in ids:
         company = LinkedinCompany.objects.filter(id=company_id).first()

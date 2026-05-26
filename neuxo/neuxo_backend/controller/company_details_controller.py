@@ -42,7 +42,7 @@ def getTriggerDataByCompanyId(company_id: str) -> dict:
             "headquarters": company.headquarters,
             "followers": company.followers,
             "category": [company.category] if company.category else [],
-            "short_description": company.short_description,
+            "short_description": company.description,
             "label": company.labels,
             "country": company.country,
             "avatar_linkedin_url": company.avatar_url,

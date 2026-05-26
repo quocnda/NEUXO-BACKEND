@@ -46,9 +46,6 @@ class UserWatchList(models.Model):
     )
     target_guest = models.JSONField(max_length=256, null=True)
     note = models.TextField(null=True, blank=True)
-    ICP = models.ForeignKey(
-        "neuxo_backend.ListICP", on_delete=models.SET_NULL, null=True, blank=True
-    )
     time_PIN = models.DateTimeField(null=True, default=None)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)

@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db import transaction
-from django.db.models import Case, F, JSONField, Q, TextField, Value, When
+from django.db.models import Case, F, JSONField, Q, Value, When
 from django.db.models.query import QuerySet
 from django.utils import timezone
 
@@ -21,7 +21,6 @@ from neuxo_backend.models import (
     LinkedinCompany,
     LinkedinJob,
     LinkedinPersonalEmail,
-    ListICP,
     MasterCompanies,
     Mentions,
     MentionsLinkedin,
@@ -35,6 +34,7 @@ from neuxo_backend.crawler.LinkedinJobServices import LinkedinJobService
 from neuxo_backend.crawler.LinkedinLeadService import LinkedinLeadService
 from neuxo_backend.crawler.LinkedinPostServices import LinkedinPostService
 from neuxo_backend.crawler.LinkedinProfileService import LinkedinProfileService
+from neuxo_backend.crawler.TwitterServices import TwitterService
 from neuxo_backend.crawler.Subdomain import Subdomains
 from users.models import UserWatchList, Users
 
@@ -298,14 +298,13 @@ def get_watchlist_data(request):
     userId = request.user.get("id", None)
     search = request.GET.get("search_key", None)
     start_date, end_date, page, limit = getParamsVer2(request)
-    icp_id = request.GET.get("icp_id", None)
     company_size = request.GET.get("company_size", None)
     country = request.GET.get("country", None)
     sortByVal = request.GET.get("sortByVal", None)
     orderByVal = request.GET.get("orderByVal", "DESC")
 
     company_watchlist = UserWatchList.objects.filter(user_id=userId).select_related(
-        "company", "ICP"
+        "company"
     )
 
     if start_date and end_date:
@@ -315,10 +314,6 @@ def get_watchlist_data(request):
 
     if search is not None:
         company_watchlist = company_watchlist.filter(Q(company__name__icontains=search))
-
-    if icp_id is not None:
-        list_icp_id = icp_id.split(",")
-        company_watchlist = company_watchlist.filter(ICP__id__in=list_icp_id)
 
     if company_size:
         company_sizes = company_size.split(",")
@@ -333,12 +328,7 @@ def get_watchlist_data(request):
             When(company__lst_email_contact__isnull=True, then=Value("[]")),
             default=F("company__lst_email_contact"),
             output_field=JSONField(),
-        ),
-        status_mail=Case(
-            When(company__user_reach_out__isnull=True, then=Value("Send mail")),
-            default=F("company__user_reach_out"),
-            output_field=TextField(),
-        ),
+        )
     )
 
     company_watchlist = company_watchlist.values(
@@ -363,10 +353,8 @@ def get_watchlist_data(request):
         "company__link_twitter",
         "company__description",
         "company__avatar_url",
-        "ICP__icp_name",
         "time_PIN",
         "lst_email",
-        "status_mail",
     )
 
     if not sortByVal:
@@ -417,9 +405,7 @@ def get_watchlist_data(request):
             "short_description": company["company__short_description"],
             "avatar_url": company["company__avatar_url"],
             "lst_email": list(company["lst_email"]) if company["lst_email"] else [],
-            "icp_name": company["ICP__icp_name"] if company["ICP__icp_name"] else "",
             "PIN": True if company["time_PIN"] else False,
-            "status_mail": company["status_mail"],
         }
         completeness, missing_field = calculate_profile_completeness(
             linkedin_url=True if company["company__linkedin_url"] else False,
@@ -450,122 +436,6 @@ def get_watchlist_data(request):
     return paginator, response_data
 
 
-def get_watchlist_by_user_team(list_icp=None, search=None, listUserId=[]):
-    """Get watchlist data for a team (admin view)."""
-    company_watchlist = UserWatchList.objects.filter(
-        user_id__in=listUserId
-    ).select_related("company", "ICP", "user")
-
-    if search is not None:
-        company_watchlist = company_watchlist.filter(Q(company__name__icontains=search))
-
-    if list_icp is not None:
-        company_watchlist = company_watchlist.filter(ICP__id__in=list_icp)
-
-    company_watchlist = company_watchlist.values(
-        "id",
-        "target_guest",
-        "company_id",
-        "note",
-        "company__name",
-        "company__website",
-        "company__industry",
-        "company__size",
-        "company__followers",
-        "company__short_description",
-        "company__linkedin_url",
-        "company__labels",
-        "company__category",
-        "company__organization_type",
-        "company__headquarters",
-        "company__country",
-        "company__updated_at",
-        "company__note_of_user",
-        "company__link_twitter",
-        "company__description",
-        "company__avatar_url",
-        "user__user_name",
-        "user__id",
-        "created_at",
-        "ICP__icp_name",
-        "time_PIN",
-    ).order_by("user_id", "-created_at")
-
-    response_data = []
-    for company in company_watchlist:
-        labels = (
-            ", ".join(company["company__labels"]) if company["company__labels"] else ""
-        )
-        trigger = (
-            MasterCompanies.objects.filter(company_id=company["company_id"])
-            .values("trigger", "funding_amount", "contact")
-            .first()
-        )
-
-        have_data_individual = LinkedinPersonalEmail.objects.filter(
-            company_id=company["company_id"]
-        )
-        dict_company = {
-            "id": company["id"],
-            "target_guest": company["target_guest"],
-            "company_id": company["company_id"],
-            "note": company["note"],
-            "company": company["company__name"],
-            "external": {
-                "hubspot": "https://app.hubspot.com/contacts/20599301/objects/0-3/views/37601064/list?globalSearchQuery="
-                + company["company__name"].replace(" ", "+"),
-                "linkedin": company["company__linkedin_url"],
-                "website": company["company__website"],
-                "twitter": company["company__link_twitter"],
-            },
-            "label": labels,
-            "trigger": trigger["trigger"] if trigger else "",
-            "updated_at": company["company__updated_at"].strftime("%Y-%m-%d"),
-            "created_at": company["created_at"].strftime("%Y-%m-%d"),
-            "funding_amount": (
-                float(trigger["funding_amount"])
-                if trigger and trigger["funding_amount"]
-                else 0
-            ),
-            "contacts": trigger["contact"] if trigger else "",
-            "company_size": company["company__size"],
-            "category": [company["company__category"]],
-            "followers": company["company__followers"],
-            "headquarters": company["company__headquarters"],
-            "country": company["company__country"],
-            "organization_type": company["company__organization_type"],
-            "industry": company["company__industry"],
-            "short_description": company["company__short_description"],
-            "avatar_url": company["company__avatar_url"],
-            "lst_email": list(have_data_individual.values_list("email", flat=True)),
-            "user": company["user__user_name"],
-            "user_id": company["user__id"],
-            "icp_name": company["ICP__icp_name"] if company["ICP__icp_name"] else "",
-            "PIN": True if company["time_PIN"] else False,
-        }
-        completeness, missing_field = calculate_profile_completeness(
-            linkedin_url=True if company["company__linkedin_url"] else False,
-            link_twitter=True if company["company__link_twitter"] else False,
-            website=True if company["company__website"] else False,
-            size=True if company["company__size"] else False,
-            description=True if company["company__description"] else False,
-            followers=True if company["company__followers"] else False,
-            headquarters=True if company["company__headquarters"] else False,
-            industry=True if company["company__industry"] else False,
-            organization_type=True if company["company__organization_type"] else False,
-            category=True if company["company__category"] else False,
-            labels=True if company["company__labels"] else False,
-            short_description=True if company["company__short_description"] else False,
-            country=True if company["company__country"] else False,
-            have_data_individual=True if have_data_individual.exists() else False,
-        )
-        dict_company["completeness"] = completeness
-        dict_company["completeness_missing"] = missing_field
-        response_data.append(dict_company)
-
-    return response_data
-
-
 # ------------------------------------ Add/Remove Watchlist ------------------------------------#
 
 
@@ -593,13 +463,19 @@ def _run_watchlist_linkedin_pipeline(company_id: str) -> None:
 
         company_name = (company.name or "").strip()
         company_website = (company.website or "").strip()
+        company_twitter = (company.link_twitter or "").strip()
         company_linkedin_url = (company.linkedin_url or "").strip()
 
         leads_service = LinkedinLeadService()
         profile_service = LinkedinProfileService()
         post_service = LinkedinPostService()
         job_service = LinkedinJobService()
-        sub_domain = Subdomains()
+        twitter_service = TwitterService()
+        try:
+            sub_domain = Subdomains()
+        except Exception:
+            sub_domain = None
+            logger.exception("Failed to initialize Subdomains")
         _append_watchlist_pipeline_log(
             company_id,
             (
@@ -617,6 +493,7 @@ def _run_watchlist_linkedin_pipeline(company_id: str) -> None:
             )
         _append_watchlist_pipeline_log(company_id, f"lead_records={len(lead_records)}")
 
+        # ------------------------------------ LinkedIn Pipeline ------------------------------------#
         people_urls = [
             person.linkedin_url.strip()
             for person in lead_records
@@ -649,12 +526,21 @@ def _run_watchlist_linkedin_pipeline(company_id: str) -> None:
             )
         _append_watchlist_pipeline_log(company_id, f"post_records={len(post_records)}")
 
+        tweet_urls = [company_twitter] if company_twitter else []
+        if tweet_urls:
+            twitter_records = (
+                twitter_service.run_get_tweets_and_upsert_mentions_by_urls(tweet_urls)
+            )
+            _append_watchlist_pipeline_log(
+                company_id, f"twitter_records={len(twitter_records)}"
+            )
+
         job_records = []
         if company_name:
             job_records = job_service.run_get_jobs_and_upsert_by_company_names(
                 [company_name]
             )
-        if company_website:
+        if company_website and sub_domain:
             subdomain_count = sub_domain.getSubdomainsByLinkCompany(company_website)
             _append_watchlist_pipeline_log(
                 company_id, f"subdomain_count={subdomain_count}"
@@ -743,7 +629,7 @@ def pin_watchlist_company(user_id: int, company_id: str) -> tuple:
         return True, "Unpin Company Successful!"
 
 
-# ------------------------------------ Edit Note/ICP ------------------------------------#
+# ------------------------------------ Edit Note ------------------------------------#
 
 
 def edit_note_for_company(user_id: int, data: list) -> tuple:
@@ -754,24 +640,6 @@ def edit_note_for_company(user_id: int, data: list) -> tuple:
         UserWatchList.objects.filter(company_id=company_id, user_id=user_id).update(
             note=note
         )
-    return True, "Success"
-
-
-def save_icp_for_company(user_id: int, company_id: str, icp_id: str) -> tuple:
-    """Save ICP for a company in watchlist."""
-    check_exist_company = UserWatchList.objects.filter(
-        user_id=user_id, company_id=company_id
-    ).exists()
-    if not check_exist_company:
-        return False, "Company not found in watchlist"
-
-    icp = ListICP.objects.filter(id=icp_id).first()
-    if not icp:
-        return False, "ICP not found"
-
-    UserWatchList.objects.filter(user_id=user_id, company_id=company_id).update(
-        ICP=icp, updated_at=timezone.now()
-    )
     return True, "Success"
 
 
@@ -1276,15 +1144,6 @@ def new_notify_today(company_id: str) -> dict:
         + data_event
     )
     return {"total_record": total_record, "guest": count_guest}
-
-
-# ------------------------------------ ICP ------------------------------------#
-
-
-def get_list_icp() -> list:
-    """Get list of ICPs."""
-    list_icp = ListICP.objects.all().values("id", "icp_name").order_by("icp_name")
-    return list(list_icp)
 
 
 # ------------------------------------ Detail Info ------------------------------------#

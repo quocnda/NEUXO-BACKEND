@@ -28,9 +28,7 @@ from neuxo_backend.controller.watchlist_controller import (
     get_all_mentioned_company_per_user,
     get_all_notify_for_user,
     get_detail_info_for_company,
-    get_list_icp,
     get_mention_per_people,
-    get_watchlist_by_user_team,
     get_watchlist_data,
     getParamsVer2,
     new_notify_today,
@@ -38,12 +36,10 @@ from neuxo_backend.controller.watchlist_controller import (
     remove_company_from_watchlist,
     remove_guest_mention_for_company,
     save_history_gen,
-    save_icp_for_company,
     seen_all_mention,
     update_company,
     update_contact,
 )
-from users.models import Users
 from users.utils.utils import requireLogin, requireRoles
 
 
@@ -254,101 +250,6 @@ def getWatchListForAdmin(request, id):
             "message": "Success",
             "pagination": paginator,
             "data": data,
-        },
-        status=HTTP_200_OK,
-    )
-
-
-# ---------------------------------------- getAllWatchlistOfMemberForAdmin ---------------------------------------- #
-
-
-@extend_schema(
-    parameters=[
-        OpenApiParameter(
-            name="search_key", description="find keyword", required=False, type=str
-        ),
-        OpenApiParameter(
-            name="list_icp", description="list_icp", required=False, type=str
-        ),
-        OpenApiParameter(
-            name="list_user_id", description="list_user_id", required=False, type=str
-        ),
-        OpenApiParameter(
-            name="page",
-            description="Page",
-            required=False,
-            type=int,
-            examples=[OpenApiExample("1", value="1")],
-        ),
-        OpenApiParameter(
-            name="limit",
-            description="Page Size",
-            required=False,
-            type=int,
-            examples=[OpenApiExample("10", value="10")],
-        ),
-    ],
-    responses={"200": "Success"},
-    auth=None,
-    operation_id="GET_GetAllWatchlistOfMember",
-    tags=["Admin seen watchlist"],
-    operation=None,
-)
-@csrf_exempt
-@api_view(["GET"])
-@requireLogin
-@requireRoles(["Admin", "Super_Admin"])
-def getAllWatchlistOfMemberForAdmin(request: HttpRequest) -> JsonResponse:
-    if request.method != "GET":
-        return JsonResponse(
-            {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
-        )
-    admin_id = request.user.get("id", None)
-    search_key = request.GET.get("search_key", None)
-    list_icp = request.GET.get("list_icp", None)
-    listUserId = request.GET.get("list_user_id", None)
-    page = int(request.GET.get("page", 1))
-    limit = int(request.GET.get("limit", 50))
-
-    if listUserId:
-        listUserId = listUserId.split(",")
-        listUserId = [uuid_str.replace("-", "") for uuid_str in listUserId]
-    else:
-        listUserId = (
-            Users.objects.filter(group="Var-meta")
-            .exclude(id=admin_id)
-            .values_list("id", flat=True)
-        )
-
-    if list_icp:
-        list_icp = list_icp.split(",")
-
-    data = get_watchlist_by_user_team(list_icp, search_key, listUserId)
-
-    if len(data) == 0:
-        return JsonResponse(
-            {
-                "message": "Success",
-                "pagination": {
-                    "page": 1,
-                    "total_page": 1,
-                    "total_item": 0,
-                },
-                "data": [],
-            },
-            status=HTTP_200_OK,
-        )
-    response_data = list(data)[page * limit - limit : page * limit]
-
-    return JsonResponse(
-        {
-            "message": "Success",
-            "pagination": {
-                "page": page,
-                "total_page": len(list(data)) // limit + 1,
-                "total_item": len(list(data)),
-            },
-            "data": response_data,
         },
         status=HTTP_200_OK,
     )
@@ -960,77 +861,6 @@ def editNoteForCompany(request: HttpRequest) -> JsonResponse:
         )
 
     edit_note_for_company(user_id, data)
-
-    return JsonResponse({"message": "Success"}, status=HTTP_200_OK)
-
-
-@extend_schema(
-    parameters=None,
-    responses={"200": "Success"},
-    auth=None,
-    operation_id="GET_getListICP",
-    tags=["ICP"],
-    operation=None,
-)
-@csrf_exempt
-@api_view(["GET"])
-@requireLogin
-def getListICP(request: HttpRequest) -> JsonResponse:
-    if request.method != "GET":
-        return JsonResponse(
-            {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
-        )
-
-    list_icp = get_list_icp()
-
-    return JsonResponse({"message": "Success", "data": list_icp}, status=HTTP_200_OK)
-
-
-@extend_schema(
-    request={
-        "application/json": {
-            "type": "object",
-            "properties": {
-                "company_id": {"type": "string"},
-                "icp_id": {"type": "string"},
-            },
-            "required": ["company_id", "icp_id"],
-        }
-    },
-    responses={"200": "Success"},
-    auth=None,
-    operation_id="PUT_saveICP",
-    tags=["ICP"],
-    operation=None,
-)
-@csrf_exempt
-@api_view(["PUT"])
-@requireLogin
-def saveICP(request: HttpRequest) -> JsonResponse:
-    if request.method != "PUT":
-        return JsonResponse(
-            {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
-        )
-
-    user_id = request.user.get("id", None)
-    data = request.data
-
-    if data == {}:
-        return JsonResponse({"message": "Data is empty"}, status=HTTP_400_BAD_REQUEST)
-
-    company_id = data.get("company_id", None)
-    icp_id = data.get("icp_id", None)
-
-    if not company_id or not icp_id:
-        return JsonResponse(
-            {"message": "Company_id and ICP_id are required"},
-            status=HTTP_400_BAD_REQUEST,
-        )
-
-    success, message = save_icp_for_company(user_id, company_id, icp_id)
-
-    if not success:
-        return JsonResponse({"message": message}, status=HTTP_400_BAD_REQUEST)
 
     return JsonResponse({"message": "Success"}, status=HTTP_200_OK)
 

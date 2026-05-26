@@ -515,20 +515,6 @@ class PersonalEmail(models.Model):
         db_table = "Personal_Email"
 
 
-# ----------------------------------- ICP -----------------------------------#
-
-
-class ListICP(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    icp_name = models.TextField(blank=True, null=True)
-    icp_description = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = "List_ICP"
-
-
 # ----------------------------------- Mentions -----------------------------------#
 
 
@@ -688,12 +674,12 @@ class HistoryGenAI(models.Model):
 # ----------------------------------- Sales Person -----------------------------------#
 
 
-class SalesPerson(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=100)
+# class SalesPerson(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     name = models.CharField(max_length=100)
 
-    class Meta:
-        db_table = "User_Sales"
+#     class Meta:
+#         db_table = "User_Sales"
 
 
 # ----------------------------------- Custom Filter -----------------------------------#

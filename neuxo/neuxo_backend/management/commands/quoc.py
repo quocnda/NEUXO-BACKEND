@@ -1,22 +1,44 @@
 from django.core.management.base import BaseCommand
-
-from neuxo_backend.crawler.LinkedinJobServices import LinkedinJobService
+from tqdm import tqdm
+from neuxo_backend.models import GuestList, LinkedinCompany
 
 
 class Command(BaseCommand):
     help = "This is a placeholder command."
 
     def handle(self, *args, **options):
-        self.stdout.write("Placeholder command executed successfully.")
-        # data = Linkedin().run_get_posts_and_upsert_mentions_by_urls(['https://linkedin.com/in/benedick-beeson-b6aa9531','https://cn.linkedin.com/in/hongfeng-zheng-93975818','https://linkedin.com/in/thuria-wenbar-98a435127','https://cn.linkedin.com/in/%E6%9C%B1%E7%BB%B4%E7%8E%AE-caroline-zhu-87218b59','http://www.variflight.com' , 'https://evaro.com'])
-        # data = LinkedinProfileService().run_get_profile_person_by_query([
-        #     "https://vn.linkedin.com/in/stephen-t-b30353222",
-        #     "https://ke.linkedin.com/in/george-kimunguyi-26911413b",
-        #     "https://sg.linkedin.com/in/wei-na-tan-58169a84",
-        #     "https://sg.linkedin.com/in/steven-bong-2042881a",
-        #     "https://sg.linkedin.com/in/jacky-lee-22062169"
-        # ])
-        data = LinkedinJobService().run_get_jobs_and_upsert_by_company_names(
-            ["listed-fans"]
+        guests = (
+            GuestList.objects.filter(company__isnull=True)
+            .exclude(website__isnull=True)
+            .exclude(website="")
         )
-        print("data :", data)
+        matched = 0
+        skipped = 0
+
+        for guest in tqdm(guests.iterator(), total=guests.count()):
+            raw_website = (guest.website or "").strip().lower()
+            if not raw_website:
+                skipped += 1
+                continue
+
+            candidates = {raw_website.rstrip("/")}
+            if not raw_website.startswith("http://") and not raw_website.startswith(
+                "https://"
+            ):
+                candidates.add(f"https://{raw_website}".rstrip("/"))
+                candidates.add(f"http://{raw_website}".rstrip("/"))
+
+            company = LinkedinCompany.objects.filter(
+                website__in=list(candidates)
+            ).first()
+            if company:
+                guest.company = company
+                guest.check_company = True
+                guest.save(update_fields=["company", "check_company", "updated_at"])
+                matched += 1
+            else:
+                skipped += 1
+
+        self.stdout.write(
+            self.style.SUCCESS(f"Matched companies: {matched}. Skipped: {skipped}.")
+        )
