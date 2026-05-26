@@ -19,11 +19,6 @@ urlpatterns = [
         company_services.getMatchingCompany,
         name="get_matching_companies",
     ),
-    # path(
-    #     "matching-companies/all-sales",
-    #     company_services.getAllSales,
-    #     name="get_all_sales",
-    # ),
     path(
         "matching-companies/listCountryCompany",
         company_services.listCountryCompany,
@@ -355,17 +350,6 @@ urlpatterns = [
         "watchlist/company/contact/<str:id>",
         watchlist_services.getAllContactForCompany,
         name="get_all_contact_for_company",
-    ),
-    # ICP
-    path(
-        "watchlist/ICP/list",
-        watchlist_services.getListICP,
-        name="get_list_icp",
-    ),
-    path(
-        "watchlist/ICP/save",
-        watchlist_services.saveICP,
-        name="save_icp",
     ),
     # Admin Watchlist Routes
     path(

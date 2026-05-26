@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 from uuid import UUID
-
+from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from neuxo_backend.dto.company_dto import (
@@ -141,7 +141,7 @@ class ContactExperienceItem(BaseModel):
     title: str | None = None
     company_name: str | None = None
     time_period: str | None = None
-    created_at: str | None = None
+    created_at: datetime | None = None
 
 
 class ContactEmailItem(BaseModel):

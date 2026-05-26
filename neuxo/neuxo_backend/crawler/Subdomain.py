@@ -14,6 +14,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 
 class Subdomains:
@@ -24,7 +28,7 @@ class Subdomains:
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-cache")
-        service = Service("/usr/bin/chromedriver")
+        service = Service(os.getenv("CHROME_DRIVER_PATH"), "/usr/bin/chromedriver")
         driver = webdriver.Chrome(service=service, options=chrome_options)
         self.driver = driver
         # self.lst_subdomain_old = list(set(MentionsSubDomain.objects.values_list('sub_domain',flat=True)))

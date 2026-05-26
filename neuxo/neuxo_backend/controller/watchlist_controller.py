@@ -21,7 +21,6 @@ from neuxo_backend.models import (
     LinkedinCompany,
     LinkedinJob,
     LinkedinPersonalEmail,
-    ListICP,
     MasterCompanies,
     Mentions,
     MentionsLinkedin,
@@ -35,6 +34,7 @@ from neuxo_backend.crawler.LinkedinJobServices import LinkedinJobService
 from neuxo_backend.crawler.LinkedinLeadService import LinkedinLeadService
 from neuxo_backend.crawler.LinkedinPostServices import LinkedinPostService
 from neuxo_backend.crawler.LinkedinProfileService import LinkedinProfileService
+from neuxo_backend.crawler.TwitterServices import TwitterService
 from neuxo_backend.crawler.Subdomain import Subdomains
 from users.models import UserWatchList, Users
 
@@ -298,7 +298,6 @@ def get_watchlist_data(request):
     userId = request.user.get("id", None)
     search = request.GET.get("search_key", None)
     start_date, end_date, page, limit = getParamsVer2(request)
-    icp_id = request.GET.get("icp_id", None)
     company_size = request.GET.get("company_size", None)
     country = request.GET.get("country", None)
     sortByVal = request.GET.get("sortByVal", None)
@@ -315,10 +314,6 @@ def get_watchlist_data(request):
 
     if search is not None:
         company_watchlist = company_watchlist.filter(Q(company__name__icontains=search))
-
-    if icp_id is not None:
-        list_icp_id = icp_id.split(",")
-        company_watchlist = company_watchlist.filter(ICP__id__in=list_icp_id)
 
     if company_size:
         company_sizes = company_size.split(",")
@@ -468,13 +463,19 @@ def _run_watchlist_linkedin_pipeline(company_id: str) -> None:
 
         company_name = (company.name or "").strip()
         company_website = (company.website or "").strip()
+        company_twitter = (company.link_twitter or "").strip()
         company_linkedin_url = (company.linkedin_url or "").strip()
 
         leads_service = LinkedinLeadService()
         profile_service = LinkedinProfileService()
         post_service = LinkedinPostService()
         job_service = LinkedinJobService()
-        sub_domain = Subdomains()
+        twitter_service = TwitterService()
+        try:
+            sub_domain = Subdomains()
+        except Exception:
+            sub_domain = None
+            logger.exception("Failed to initialize Subdomains")
         _append_watchlist_pipeline_log(
             company_id,
             (
@@ -492,6 +493,7 @@ def _run_watchlist_linkedin_pipeline(company_id: str) -> None:
             )
         _append_watchlist_pipeline_log(company_id, f"lead_records={len(lead_records)}")
 
+        # ------------------------------------ LinkedIn Pipeline ------------------------------------#
         people_urls = [
             person.linkedin_url.strip()
             for person in lead_records
@@ -524,12 +526,21 @@ def _run_watchlist_linkedin_pipeline(company_id: str) -> None:
             )
         _append_watchlist_pipeline_log(company_id, f"post_records={len(post_records)}")
 
+        tweet_urls = [company_twitter] if company_twitter else []
+        if tweet_urls:
+            twitter_records = (
+                twitter_service.run_get_tweets_and_upsert_mentions_by_urls(tweet_urls)
+            )
+            _append_watchlist_pipeline_log(
+                company_id, f"twitter_records={len(twitter_records)}"
+            )
+
         job_records = []
         if company_name:
             job_records = job_service.run_get_jobs_and_upsert_by_company_names(
                 [company_name]
             )
-        if company_website:
+        if company_website and sub_domain:
             subdomain_count = sub_domain.getSubdomainsByLinkCompany(company_website)
             _append_watchlist_pipeline_log(
                 company_id, f"subdomain_count={subdomain_count}"
@@ -618,7 +629,7 @@ def pin_watchlist_company(user_id: int, company_id: str) -> tuple:
         return True, "Unpin Company Successful!"
 
 
-# ------------------------------------ Edit Note/ICP ------------------------------------#
+# ------------------------------------ Edit Note ------------------------------------#
 
 
 def edit_note_for_company(user_id: int, data: list) -> tuple:
@@ -629,24 +640,6 @@ def edit_note_for_company(user_id: int, data: list) -> tuple:
         UserWatchList.objects.filter(company_id=company_id, user_id=user_id).update(
             note=note
         )
-    return True, "Success"
-
-
-def save_icp_for_company(user_id: int, company_id: str, icp_id: str) -> tuple:
-    """Save ICP for a company in watchlist."""
-    check_exist_company = UserWatchList.objects.filter(
-        user_id=user_id, company_id=company_id
-    ).exists()
-    if not check_exist_company:
-        return False, "Company not found in watchlist"
-
-    icp = ListICP.objects.filter(id=icp_id).first()
-    if not icp:
-        return False, "ICP not found"
-
-    UserWatchList.objects.filter(user_id=user_id, company_id=company_id).update(
-        ICP=icp, updated_at=timezone.now()
-    )
     return True, "Success"
 
 
@@ -1151,15 +1144,6 @@ def new_notify_today(company_id: str) -> dict:
         + data_event
     )
     return {"total_record": total_record, "guest": count_guest}
-
-
-# ------------------------------------ ICP ------------------------------------#
-
-
-def get_list_icp() -> list:
-    """Get list of ICPs."""
-    list_icp = ListICP.objects.all().values("id", "icp_name").order_by("icp_name")
-    return list(list_icp)
 
 
 # ------------------------------------ Detail Info ------------------------------------#

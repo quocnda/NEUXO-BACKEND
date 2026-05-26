@@ -28,7 +28,6 @@ from neuxo_backend.controller.watchlist_controller import (
     get_all_mentioned_company_per_user,
     get_all_notify_for_user,
     get_detail_info_for_company,
-    get_list_icp,
     get_mention_per_people,
     get_watchlist_data,
     getParamsVer2,
@@ -37,7 +36,6 @@ from neuxo_backend.controller.watchlist_controller import (
     remove_company_from_watchlist,
     remove_guest_mention_for_company,
     save_history_gen,
-    save_icp_for_company,
     seen_all_mention,
     update_company,
     update_contact,
@@ -863,77 +861,6 @@ def editNoteForCompany(request: HttpRequest) -> JsonResponse:
         )
 
     edit_note_for_company(user_id, data)
-
-    return JsonResponse({"message": "Success"}, status=HTTP_200_OK)
-
-
-@extend_schema(
-    parameters=None,
-    responses={"200": "Success"},
-    auth=None,
-    operation_id="GET_getListICP",
-    tags=["ICP"],
-    operation=None,
-)
-@csrf_exempt
-@api_view(["GET"])
-@requireLogin
-def getListICP(request: HttpRequest) -> JsonResponse:
-    if request.method != "GET":
-        return JsonResponse(
-            {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
-        )
-
-    list_icp = get_list_icp()
-
-    return JsonResponse({"message": "Success", "data": list_icp}, status=HTTP_200_OK)
-
-
-@extend_schema(
-    request={
-        "application/json": {
-            "type": "object",
-            "properties": {
-                "company_id": {"type": "string"},
-                "icp_id": {"type": "string"},
-            },
-            "required": ["company_id", "icp_id"],
-        }
-    },
-    responses={"200": "Success"},
-    auth=None,
-    operation_id="PUT_saveICP",
-    tags=["ICP"],
-    operation=None,
-)
-@csrf_exempt
-@api_view(["PUT"])
-@requireLogin
-def saveICP(request: HttpRequest) -> JsonResponse:
-    if request.method != "PUT":
-        return JsonResponse(
-            {"message": "Invalid request method"}, status=HTTP_405_METHOD_NOT_ALLOWED
-        )
-
-    user_id = request.user.get("id", None)
-    data = request.data
-
-    if data == {}:
-        return JsonResponse({"message": "Data is empty"}, status=HTTP_400_BAD_REQUEST)
-
-    company_id = data.get("company_id", None)
-    icp_id = data.get("icp_id", None)
-
-    if not company_id or not icp_id:
-        return JsonResponse(
-            {"message": "Company_id and ICP_id are required"},
-            status=HTTP_400_BAD_REQUEST,
-        )
-
-    success, message = save_icp_for_company(user_id, company_id, icp_id)
-
-    if not success:
-        return JsonResponse({"message": message}, status=HTTP_400_BAD_REQUEST)
 
     return JsonResponse({"message": "Success"}, status=HTTP_200_OK)
 
