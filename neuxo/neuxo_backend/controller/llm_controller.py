@@ -228,7 +228,13 @@ def _get_sequence_trigger(
             Notification.objects.filter(company=company, guest_id__isnull=True)
             .exclude(type="SUB_DOMAIN")
             .order_by("-time_post")[:20]
-            .values("title", "type", "post_url", "reference_id", "time_post")
+            .values(
+                "title",
+                "type",
+                "post_url",
+                "reference_id",
+                "time_post",
+            )
         )
         if company
         else []
@@ -239,7 +245,13 @@ def _get_sequence_trigger(
             Notification.objects.filter(guest_id=str(person.id))
             .exclude(type="SUB_DOMAIN")
             .order_by("-time_post")[:20]
-            .values("title", "type", "post_url", "reference_id", "time_post")
+            .values(
+                "title",
+                "type",
+                "post_url",
+                "reference_id",
+                "time_post",
+            )
         )
 
     if not notifications:
@@ -250,32 +262,23 @@ def _get_sequence_trigger(
             "description": "",
         }
 
-    priority_map = {
-        "JOB_CHANGE": 1,
-        "HIRING": 2,
-        "FUNDING": 3,
-        "EVENT": 4,
-        "NEWS": 5,
-        "LINKEDIN": 6,
-        "TWITTER": 7,
-    }
-    notifications.sort(key=lambda item: priority_map.get(item.get("type"), 99))
-    selected = notifications[0]
-
-    trigger_type = selected.get("type") or "DEFAULT"
-    trigger_details = None
-    if trigger_type == "HIRING":
-        trigger_details = "HIRING"
-    elif trigger_type == "FUNDING":
-        trigger_details = "FUNDING"
-    elif trigger_type == "EVENT":
-        trigger_details = "EVENT"
+    recent = notifications[:20]
+    trigger_types = [item.get("type") or "DEFAULT" for item in recent]
+    trigger_details_list = [
+        trigger_type
+        for trigger_type in trigger_types
+        if trigger_type in {"HIRING", "FUNDING", "EVENT"}
+    ]
+    titles = [item.get("title", "") or "" for item in recent]
+    descriptions = [
+        item.get("title", "") or item.get("title", "") or "" for item in recent
+    ]
 
     return {
-        "type": trigger_type,
-        "trigger_details": trigger_details,
-        "title": selected.get("title", "") or "",
-        "description": selected.get("title", "") or "",
+        "type": ", ".join(trigger_types),
+        "trigger_details": ", ".join(trigger_details_list) or None,
+        "title": ", ".join([value for value in titles if value]),
+        "description": ", ".join([value for value in descriptions if value]),
     }
 
 
