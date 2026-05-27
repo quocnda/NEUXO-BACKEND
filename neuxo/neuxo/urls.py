@@ -52,7 +52,7 @@ urlpatterns = [
         name="redoc",
     ),
     path("admin/", admin.site.urls),
-    path("users/", include("users.urls")),
+    path("user/", include("users.urls")),
     path("data/", include("neuxo_backend.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

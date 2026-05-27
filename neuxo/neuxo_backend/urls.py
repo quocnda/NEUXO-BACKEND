@@ -4,8 +4,9 @@ from neuxo_backend.services import (
     blacklist_services,
     company_details_services,
     company_services,
+    custom_filter_services,
+    email_services,
     event_services,
-    funding_services,
     job_services,
     watchlist_services,
 )
@@ -14,29 +15,32 @@ from neuxo_backend.services import (
 urlpatterns = [
     # Matching Companies
     path(
-        "matching-companies/list/",
+        "matching-companies/list",
         company_services.getMatchingCompany,
         name="get_matching_companies",
     ),
     path(
-        "matching-companies/listCountryCompany/",
+        "matching-companies/listCountryCompany",
         company_services.listCountryCompany,
         name="list_country_company",
     ),
     path(
-        "matching-companies/updateShowingColumns/",
+        "matching-companies/updateShowingColumns",
         company_services.updateShowingColumns,
         name="update_showing_columns",
     ),
     path(
-        "matching-companies/downloadMasterCompany/",
+        "matching-companies/downloadMasterCompany",
         company_services.downloadMatchingCompany,
         name="download_master_company",
     ),
     path(
-        "companies/field-column/",
+        "companies/field-column",
         company_services.getColumnField,
         name="get_column_field",
+    ),
+    path(
+        "companies/<str:id>", company_services.getCompanyById, name="get_company_by_id"
     ),
     # Blacklist
     path(
@@ -45,218 +49,442 @@ urlpatterns = [
         name="add_blacklist",
     ),
     path(
-        "matching-companies/getBlacklist/",
+        "matching-companies/getBlacklist",
         blacklist_services.getBlacklist,
         name="get_blacklist",
     ),
     path(
-        "matching-companies/removeBlacklist/",
+        "matching-companies/removeBlacklist",
         blacklist_services.removeBlacklist,
         name="remove_blacklist",
     ),
     # Company Details
     path(
-        "companies/<str:id>/",
+        "companies/<str:id>",
         company_details_services.getCompanyById,
         name="get_company_by_id",
     ),
     path(
-        "companies/addTwitter/<str:id>/",
+        "companies/addTwitter/<str:id>",
         company_details_services.addTwitterForCompany,
         name="add_twitter_for_company",
     ),
     path(
-        "companies/<str:id>/contact/",
+        "companies/<str:id>/contact",
         company_details_services.getListContactByCompanyID,
         name="get_list_contact_by_company_id",
     ),
     path(
-        "companies/<str:id>/addContact/",
+        "companies/<str:id>/addContact",
         company_details_services.addContactForCompany,
         name="add_contact_for_company",
     ),
     path(
-        "companies/delete-contact/<str:id>/",
+        "companies/delete-contact/<str:id>",
         company_details_services.deleteContactCompany,
         name="delete_contact_company",
     ),
     path(
-        "companies/contact/<str:id>/addEmail/",
+        "companies/contact/<str:id>/addEmail",
         company_details_services.addEmailForContact,
         name="add_email_for_contact",
     ),
     path(
-        "companies/contact/removeEmail/<str:id>/",
+        "companies/contact/removeEmail/<str:id>",
         company_details_services.removeEmailForContact,
         name="remove_email_for_contact",
     ),
     path(
-        "companies/contact/<str:contact_id>/updateEmail/<str:id>/",
+        "companies/contact/<str:contact_id>/updateEmail/<str:id>",
         company_details_services.updateEmailForContact,
         name="update_email_for_contact",
     ),
     path(
-        "getEventsByCompanyID/<str:id>/",
+        "company/addNoteCompanyFromUser",
+        company_services.addNoteCompanyFromUser,
+        name="add_note_company_from_user",
+    ),
+    path(
+        "getEventsByCompanyID/<str:id>",
         company_details_services.getEventsByCompanyID,
         name="get_events_by_company_id",
     ),
     path(
-        "getJobsByCompanyID/<str:id>/",
+        "getJobsByCompanyID/<str:id>",
         company_details_services.getJobsByCompanyID,
         name="get_jobs_by_company_id",
     ),
     path(
-        "getContactsByCompanyID/<str:id>/",
+        "getContactsByCompanyID/<str:id>",
         company_details_services.getContactsByCompanyID,
         name="get_contacts_by_company_id",
     ),
     path(
-        "getFundingByCompanyID/<str:id>/",
+        "getFundingByCompanyID/<str:id>",
         company_details_services.getFundingByCompanyID,
         name="get_funding_by_company_id",
     ),
     path(
-        "getTriggerByCompanyID/<str:id>/",
+        "getTriggerByCompanyID/<str:id>",
         company_details_services.getTriggerByCompanyID,
         name="get_trigger_by_company_id",
     ),
+    path(
+        "company/notify/seen",
+        company_details_services.seenNotifyForCompany,
+        name="seen_notify_for_company",
+    ),
+    path(
+        "company/<str:id>/notify",
+        company_details_services.getNotifyForCompany,
+        name="get_notify_for_company",
+    ),
     # ----------------------------- Jobs -----------------------------------#
     path(
-        "jobs/list/",
+        "jobs/list",
         job_services.getJobs,
         name="get_jobs",
     ),
     path(
-        "jobs/metadata/",
+        "jobs/metadata",
         job_services.getMetaData,
         name="get_jobs_metadata",
     ),
     path(
-        "jobs/<str:id>/",
+        "jobs/<str:id>",
         job_services.getJobById,
         name="get_job_by_id",
     ),
     path(
-        "jobs/download/",
+        "jobs/download",
         job_services.downloadJob,
         name="download_jobs",
     ),
     # ----------------------------- Events -----------------------------------#
     path(
-        "events/list/",
+        "events/list",
         event_services.getEvents,
         name="get_events",
     ),
     path(
-        "events/country-parent/",
+        "events/country-parent",
         event_services.getListCountryAndParentEvent,
         name="get_list_country_and_parent_event",
     ),
     path(
-        "events/<str:id>/",
+        "events/<str:id>",
         event_services.getEventByID,
         name="get_event_by_id",
     ),
     path(
-        "events/<str:id>/guests/",
+        "events/guests/list",
         event_services.getEventGuests,
         name="get_event_guests",
     ),
     path(
-        "events/columns/guests/",
+        "events/columns/guests",
         event_services.getColumnsEventsGuest,
         name="get_columns_events_guest",
     ),
     path(
-        "events/guests/updateNote/",
+        "events/guests/updateNote",
         event_services.updateNoteGuests,
         name="update_note_guests",
     ),
     path(
-        "events/guests/updateEmail/",
+        "events/guests/updateEmail",
         event_services.updateEmailGuests,
         name="update_email_guests",
     ),
     path(
-        "events/company-link/<str:id>/",
+        "events/company-link/<str:id>",
         event_services.getCompanyLinkToEvent,
         name="get_company_link_to_event",
     ),
     path(
-        "events/download/",
-        event_services.downloadEvents,
-        name="download_events",
-    ),
-    path(
-        "events/download/companies/",
-        event_services.downloadCompanyInEvents,
-        name="download_company_in_events",
-    ),
-    path(
-        "events/download/guests/",
+        "events/download/guests",
         event_services.downloadGuests,
         name="download_guests",
     ),
-    # ----------------------------- Funding -----------------------------------#
-    path(
-        "funding/list/",
-        funding_services.getFundings,
-        name="get_fundings",
-    ),
-    path(
-        "funding/metadata/",
-        funding_services.getMetaData,
-        name="get_funding_metadata",
-    ),
-    path(
-        "funding/<str:id>/",
-        funding_services.getFundingByID,
-        name="get_funding_by_id",
-    ),
-    path(
-        "funding/download/",
-        funding_services.downloadFunding,
-        name="download_funding",
-    ),
     # ----------------------------- Watchlist -----------------------------------#
     path(
-        "watchlist/add/",
+        "watchlist/add",
         watchlist_services.addCompanyToWatchList,
         name="add_company_to_watchlist",
     ),
     path(
-        "watchlist/remove/",
+        "watchlist/remove",
         watchlist_services.removeCompanyFromWatchList,
         name="remove_company_from_watchlist",
     ),
     path(
-        "watchlist/list/",
+        "watchlist/list",
         watchlist_services.getWatchList,
         name="get_watchlist",
     ),
     path(
-        "watchlist/pin/",
+        "watchlist/PIN",
         watchlist_services.PINWatchlist,
         name="pin_watchlist",
     ),
     path(
-        "watchlist/editNote/",
+        "watchlist/company/editNote",
         watchlist_services.editNoteForCompany,
         name="edit_note_for_company",
     ),
     path(
-        "watchlist/<str:id>/detail/",
-        watchlist_services.getDetailInfoForCompany,
-        name="get_detail_info_for_company",
-    ),
-    path(
-        "watchlist/notifications/",
+        "watchlist/notify",
         watchlist_services.getAllNotifyForUser,
         name="get_all_notify_for_user",
     ),
     path(
-        "watchlist/<str:id>/newNotify/",
+        "watchlist/seenAll",
+        watchlist_services.seenAllMention,
+        name="seen_all_mention",
+    ),
+    # AI Completions
+    path(
+        "watchlist/contact/<str:id>/create-id-completions",
+        watchlist_services.getIDCompletionsForContacts,
+        name="get_id_completions_for_contacts",
+    ),
+    path(
+        "watchlist/company/<str:id>/create-id-completions",
+        watchlist_services.getIDCompletionsForCompany,
+        name="get_id_completions_for_company",
+    ),
+    path(
+        "watchlist/save-history-chat",
+        watchlist_services.saveHistoryGen,
+        name="save_history_gen",
+    ),
+    path(
+        "watchlist/contact/<str:id>/get-history-chat",
+        watchlist_services.getAllCompletionsForContact,
+        name="get_all_completions_for_contact",
+    ),
+    path(
+        "watchlist/company/<str:id>/get-history-chat",
+        watchlist_services.getAllCompletionsForCompany,
+        name="get_all_completions_for_company",
+    ),
+    path(
+        "watchlist/delete-history-chat",
+        watchlist_services.deleteCompletions,
+        name="delete_completions",
+    ),
+    path(
+        "watchlist/edit-subject-chat",
+        watchlist_services.editSubjectCompletions,
+        name="edit_subject_completions",
+    ),
+    # Mentions
+    path(
+        "watchlist/mention/<str:id>/people",
+        watchlist_services.getMentionPerPeople,
+        name="get_mention_per_people",
+    ),
+    path(
+        "watchlist/mention/<str:id>",
+        watchlist_services.getAllMentionedCompanyPerUser,
+        name="get_all_mentioned_company_per_user",
+    ),
+    path(
+        "watchlist/mention",
+        watchlist_services.getAllMention,
+        name="get_all_mention",
+    ),
+    # Guest Management
+    path(
+        "watchlist/company/<str:id>/addGuestMention",
+        watchlist_services.addNewGuestMentionForCompany,
+        name="add_new_guest_mention_for_company",
+    ),
+    path(
+        "watchlist/company/<str:id>/addGuestAvailableMention",
+        watchlist_services.addGuestAvailableMention,
+        name="add_guest_available_mention",
+    ),
+    path(
+        "watchlist/company/<str:id>/removeGuestMention",
+        watchlist_services.removeGuestMentionForCompany,
+        name="remove_guest_mention_for_company",
+    ),
+    # Company Management
+    path(
+        "watchlist/company/<str:id>/updateCompany",
+        watchlist_services.updateCompany,
+        name="update_company",
+    ),
+    path(
+        "watchlist/company/<str:id>/getDetailInfo",
+        watchlist_services.getDetailInfoForCompany,
+        name="get_detail_info_for_company",
+    ),
+    path(
+        "watchlist/company/checkHadOtherWatchlist",
+        watchlist_services.checkHadOtherWatchlist,
+        name="check_had_other_watchlist",
+    ),
+    path(
+        "watchlist/company/checkHadCreateManual",
+        watchlist_services.checkHadCreateManualWatchlist,
+        name="check_had_create_manual_watchlist",
+    ),
+    path(
+        "watchlist/company/<str:id>/newNotifyToday",
         watchlist_services.newNotifyToday,
         name="new_notify_today",
+    ),
+    path(
+        "watchlist/company/<str:id>",
+        watchlist_services.getAllGuestMentionForCompany,
+        name="get_all_guest_mention_for_company",
+    ),
+    path(
+        "watchlist/company/contact/<str:id>/updateContact",
+        watchlist_services.updateContact,
+        name="update_contact",
+    ),
+    path(
+        "watchlist/company/contact/<str:id>",
+        watchlist_services.getAllContactForCompany,
+        name="get_all_contact_for_company",
+    ),
+    # Admin Watchlist Routes
+    path(
+        "admin/watchlist/mention/<str:id>/people",
+        watchlist_services.getMentionPerPeoplePerAdmin,
+        name="get_mention_per_people_per_admin",
+    ),
+    path(
+        "admin/watchlist/contact/<str:id>",
+        watchlist_services.getAllContactForCompanyPerAdmin,
+        name="get_all_contact_for_company_per_admin",
+    ),
+    path(
+        "admin/watchlist/mention/<str:id>",
+        watchlist_services.getAllMentionedCompanyPerAdmin,
+        name="get_all_mentioned_company_per_admin",
+    ),
+    path(
+        "admin/watchlist/<str:id>/list",
+        watchlist_services.getWatchListForAdmin,
+        name="get_watchlist_for_admin",
+    ),
+    # ----------------------------- Email Management -----------------------------------#
+    path(
+        "mail/addAccount",
+        email_services.saveEmailAccount,
+        name="save_email_account",
+    ),
+    path(
+        "mail/getAllConversation",
+        email_services.getAllConversationStatic,
+        name="get_all_conversation_static",
+    ),
+    path(
+        "mail/get-list-email-tracking",
+        email_services.getListEmailTracking,
+        name="get_list_email_tracking",
+    ),
+    path(
+        "mail/getMailDetails",
+        email_services.getMailConversation,
+        name="get_mail_conversation",
+    ),
+    path(
+        "mail/updateRecord",
+        email_services.updateRecord,
+        name="update_email_record",
+    ),
+    path(
+        "mail/setFollowUpDateForReplied",
+        email_services.setFollowUpDateForReplied,
+        name="set_follow_up_date",
+    ),
+    # Email Signatures
+    path(
+        "mail/getSignatures",
+        email_services.getAllSignatureMail,
+        name="get_all_signature_mail",
+    ),
+    path(
+        "mail/putSignature",
+        email_services.putSignatureMail,
+        name="put_signature_mail",
+    ),
+    path(
+        "mail/putSignature/",
+        email_services.putSignatureMail,
+        name="put_signature_mail_legacy",
+    ),
+    path(
+        "mail/deleteSignature/<str:id>",
+        email_services.deleteSignatureMail,
+        name="delete_signature_mail",
+    ),
+    # ----------------------------- Email Template -----------------------------------#
+    path(
+        "email/template/create",
+        email_services.createEmailTemplate,
+        name="create_email_template",
+    ),
+    path(
+        "email/template/list",
+        email_services.getEmailTemplate,
+        name="get_email_template",
+    ),
+    path(
+        "email/template/update/<str:id>",
+        email_services.updateEmailTemplate,
+        name="update_email_template",
+    ),
+    path(
+        "email/template/delete/<str:id>",
+        email_services.deleteEmailTemplate,
+        name="delete_email_template",
+    ),
+    path(
+        "email/template/<str:id>",
+        email_services.getEmailTemplateById,
+        name="get_email_template_by_id",
+    ),
+    # ----------------------------- Email Automation -----------------------------------#
+    path(
+        "automate/email/create-sequence",
+        email_services.createSequenceEmail,
+        name="create_sequence_email",
+    ),
+    path(
+        "automate/email/preview-email",
+        email_services.previewEmail,
+        name="preview_email",
+    ),
+    path(
+        "automate/email/submit-sequence",
+        email_services.submitSequenceEmail,
+        name="submit_sequence_email",
+    ),
+    path(
+        "automate/email/check-email-sent",
+        email_services.checkEmailSent,
+        name="check_email_sent",
+    ),
+    # ----------------------------- Custom Filter -----------------------------------#
+    path(
+        "customFilter/list",
+        custom_filter_services.getCustomFilters,
+        name="get_custom_filters",
+    ),
+    path(
+        "customFilter/delete/<str:id>",
+        custom_filter_services.deleteCustomFilter,
+        name="delete_custom_filter",
+    ),
+    path(
+        "customFilter/save",
+        custom_filter_services.saveCustomFilter,
+        name="save_custom_filter",
     ),
 ]

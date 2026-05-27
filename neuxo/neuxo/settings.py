@@ -10,14 +10,29 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-from pathlib import Path
 import os
+from pathlib import Path
 from urllib.parse import quote
+
 from dotenv import load_dotenv
 
 load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _build_redis_url(
+    host: str | None,
+    port: str | None,
+    db: str | None,
+    password: str | None = None,
+) -> str:
+    host = host or "127.0.0.1"
+    port = port or "6379"
+    db = db or "0"
+    if password:
+        return f"redis://:{quote(password)}@{host}:{port}/{db}"
+    return f"redis://{host}:{port}/{db}"
 
 
 # Quick-start development settings - unsuitable for production
@@ -53,6 +68,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -237,18 +253,42 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://"
-        + os.getenv("REDIS_HOST")
-        + ":"
-        + os.getenv("REDIS_PORT")
-        + "/"
-        + os.getenv("REDIS_DB"),
+        "LOCATION": _build_redis_url(
+            os.getenv("REDIS_HOST"),
+            os.getenv("REDIS_PORT"),
+            os.getenv("REDIS_DB"),
+        ),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "PASSWORD": os.getenv("REDIS_PASSWORD"),
         },
     }
 }
+
+CELERY_BROKER_URL = os.getenv(
+    "CELERY_BROKER_URL",
+    _build_redis_url(
+        os.getenv("REDIS_HOST"),
+        os.getenv("REDIS_PORT"),
+        os.getenv("REDIS_DB", "1"),
+    ),
+)
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_ENABLE_UTC = True
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = int(os.getenv("CELERY_TASK_TIME_LIMIT", "1200"))
+CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("CELERY_TASK_SOFT_TIME_LIMIT", "900"))
+CELERY_WORKER_PREFETCH_MULTIPLIER = int(
+    os.getenv("CELERY_WORKER_PREFETCH_MULTIPLIER", "1")
+)
+CELERY_TASK_ACKS_LATE = True
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_EMAIL_CRAWL_BATCH_SIZE = int(os.getenv("CELERY_EMAIL_CRAWL_BATCH_SIZE", "50"))
+CELERY_EMAIL_CRAWL_COUNTDOWN = int(os.getenv("CELERY_EMAIL_CRAWL_COUNTDOWN", "2"))
 
 # LOGGING = {
 #     "version": 1,
@@ -290,7 +330,7 @@ CHANNEL_LAYERS = {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
             "hosts": [
-                f"redis://:{quote(os.getenv('REDIS_PASSWORD'))}@{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PORT')}/0"
+                f"redis://:{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PORT')}/0"
             ],
         },
     },
@@ -316,3 +356,14 @@ CHANNEL_LAYERS = {
 #         },
 #     },
 # }
+
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3001",
+]
+
+CORS_ALLOW_CREDENTIALS = True  # nếu login dùng cookie/session
+CORS_ALLOW_ALL_HEADERS = True
+CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+
+APPEND_SLASH = False

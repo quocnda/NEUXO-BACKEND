@@ -221,7 +221,6 @@ def get_event_guests(request, event_id: str):
     role = request.GET.get("role", None)
     country = request.GET.get("country", None)
     category = request.GET.get("category", None)
-    mail_status = request.GET.get("email_status", None)
     headquarter = request.GET.get("headquarter", "[]")
     sortByVal = request.GET.get("sortByVal", None)
     orderByVal = request.GET.get("orderByVal", "DESC")
@@ -253,7 +252,9 @@ def get_event_guests(request, event_id: str):
         "name",
         "role",
         "linkedin_url",
+        "linkedin_url_full",
         "twitter_url",
+        "twitter_url_full",
         "website",
         "event__name",
         "event__id",
@@ -322,7 +323,6 @@ def get_event_guests(request, event_id: str):
                     "last_reply": "",
                 }
             ],
-            "email_status": item.get("email_status_emailinfor") or "UNREACHED",
         }
         transformed_data.append(transformed)
 
@@ -343,7 +343,6 @@ def get_event_guests(request, event_id: str):
         "role": role,
         "company__country": country,
         "category": category,
-        "email_status": mail_status,
     }
 
     for key, value in filters.items():
@@ -475,3 +474,46 @@ def get_company_link_to_event(event_id: str) -> list:
         )
 
     return result
+
+
+def get_guests_by_event(request):
+    event_id = request.GET.get("event_id", None)
+
+    if not event_id:
+        return False
+
+    LIST_FIELDS = [
+        "name",
+        "role",
+        "linkedin_url",
+        "twitter_url",
+        "website",
+        "email",
+        "company__country",
+        "created_at",
+    ]
+
+    main_data = (
+        GuestList.objects.filter(event_id=event_id)
+        .annotate(contact_name=F("name"), company_country=F("company__country"))
+        .values(*LIST_FIELDS)
+    )
+
+    for data in main_data:
+        data["created_at"] = data["created_at"].strftime("%Y-%m-%d")
+        data["twitter_url"] = (
+            "https://twitter.com/" + data["twitter_url"]
+            if data["twitter_url"]
+            else None
+        )
+        data["linkedin_url"] = (
+            "https://www.linkedin.com" + data["linkedin_url"]
+            if data["linkedin_url"]
+            else None
+        )
+
+    if len(main_data) == 0:
+        return []
+    size = len(list(main_data))
+    data = list(main_data)[:size]
+    return data

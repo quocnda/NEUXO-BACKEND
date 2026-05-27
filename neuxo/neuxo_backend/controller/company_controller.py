@@ -6,10 +6,20 @@ from neuxo_backend.controller.utils import (
     getShowingColumns,
 )
 from neuxo_backend.models import MasterCompanies, ShowingField
+from neuxo_backend.dto.company_dto import (
+    MatchingCompanyItem,
+    MatchingCompanyPagination,
+    ShowingColumn,
+    UpdateShowingColumnItem,
+)
+from django.db import models
 from django.db.models import Q
+from users.models import UserWatchList
 
 
-def getDataCompany(request):
+def getDataCompany(
+    request,
+) -> tuple[MatchingCompanyPagination, list[MatchingCompanyItem], list[ShowingColumn]]:
     search_key = request.GET.get("search_key", None)
     companies = MasterCompanies.objects.all().order_by(("-company__created_at"))
     print("Total LEN COMPANIES:", companies.count())
@@ -19,8 +29,10 @@ def getDataCompany(request):
         .select_related("company")
     )
     print("Initial LEN COMPANIES:", companies.count())
+    print("Search key:", search_key)
     if search_key:
         companies = companies.filter(Q(company__name__icontains=search_key))
+    print("LEN COMPANIES after search key:", companies.count())
     count_trigger = request.GET.get("count_trigger", None)
     userId = request.user.get("id", None)
 
@@ -32,6 +44,9 @@ def getDataCompany(request):
         companies = companies.filter(updated_at__range=[start_date, end_date])
     print("LEN COMPANIES:", companies.count())
     lst_data = []
+    user_watchlist = UserWatchList.objects.filter(user_id=userId).values_list(
+        "company_id", flat=True
+    )
     sort_field_map = {
         "company": "company__name",
         "followers": "company__followers",
@@ -90,6 +105,7 @@ def getDataCompany(request):
         labels = (
             ", ".join(company["company__labels"]) if company["company__labels"] else ""
         )
+        is_in_user_watchlist = company["company__id"] in user_watchlist
 
         dict_company = {
             "company_id": company["company__id"],
@@ -104,7 +120,7 @@ def getDataCompany(request):
             "trigger": company["trigger"],
             "trigger_time": company["trigger_time"].strftime("%Y-%m-%d"),
             "updated_at": company["updated_at"].strftime("%Y-%m-%d"),
-            "funding_amount": float(company["funding_amount"]),
+            "funding_amount": company["funding_amount"],
             "contacts": company["contact"],
             "company_size": company["company__size"],
             "category": company["company__category"],
@@ -116,6 +132,7 @@ def getDataCompany(request):
             "note": company["company__note_of_user"],
             "avatar_url": company["company__avatar_url"],
             "short_description": company["company__short_description"],
+            "watchlist": is_in_user_watchlist,
             "lst_email": company["company__lst_email_contact"]
             if company["company__lst_email_contact"]
             else [],
@@ -145,6 +162,19 @@ def getDataCompany(request):
         # Update total count after applying count_trigger filter
         total_count = len(companies)
 
+    company_ids = [company["company_id"] for company in companies]
+    watchlist_counts = {}
+    if company_ids:
+        watchlist_counts = dict(
+            UserWatchList.objects.filter(company_id__in=company_ids)
+            .values("company_id")
+            .annotate(count=models.Count("id"))
+            .values_list("company_id", "count")
+        )
+
+    for company in companies:
+        company["is_in_watchlist"] = watchlist_counts.get(company["company_id"], 0)
+
     paginator = {
         "page": page,
         "limit": limit,
@@ -152,15 +182,23 @@ def getDataCompany(request):
         "total_item": total_count,
     }
 
-    return paginator, companies, showing_columns
+    normalized_pagination = MatchingCompanyPagination.model_validate(paginator)
+    normalized_items = [MatchingCompanyItem.model_validate(item) for item in companies]
+    normalized_columns = [
+        ShowingColumn.model_validate(item) for item in showing_columns
+    ]
+
+    return normalized_pagination, normalized_items, normalized_columns
 
 
-def updateShowingColumnsData(userId, name_columns_and_status: list[dict]):
+def updateShowingColumnsData(
+    userId, name_columns_and_status: list[UpdateShowingColumnItem]
+):
     count = 0
     for column in name_columns_and_status:
         count += 1
-        is_show = "YES" if column.get("is_show") else "NO"
-        ShowingField.objects.filter(name_columns=column["name"], user_id=userId).update(
+        is_show = "YES" if column.is_show else "NO"
+        ShowingField.objects.filter(name_columns=column.name, user_id=userId).update(
             is_show=is_show, order_by=count
         )
     return getShowingColumns(userId)

@@ -22,6 +22,4 @@ urlpatterns = [
     path("admin/list", userServices.getListUser, name="list_user"),
     path("admin/delete/<str:id>", userServices.deleteUser, name="delete_user"),
     path("admin/update/<str:id>", userServices.updateUser, name="update_user"),
-    # path('forgot_password',userServices.forgotPasswordUser, name='forgot_password'),
-    # path('update_profile', userServices.updateProfile, name='update_profile'),
 ]

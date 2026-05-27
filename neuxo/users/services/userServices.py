@@ -347,8 +347,6 @@ def userInfo(request):
                     "location",
                     "pwd_sha256",
                     "role",
-                    "avatar__path_file",
-                    "avatar__file_name",
                 )
                 .first()
             )
@@ -376,12 +374,7 @@ def userInfo(request):
                 "location": usernameCheck["location"],
                 "has_password": True if usernameCheck["pwd_sha256"] else False,
                 "has_mail_app_pass": has_mail_app_pass,
-                "avatar": {
-                    "file_name": usernameCheck["avatar__file_name"],
-                    "file_path": usernameCheck["avatar__path_file"],
-                }
-                if usernameCheck["avatar__path_file"]
-                else None,
+                "avatar": None,
                 "email_tracker": email_infor,
             }
             return JsonResponse(
@@ -389,6 +382,9 @@ def userInfo(request):
                 status=HTTP_200_OK,
             )
         except Exception:
+            import traceback
+
+            traceback.print_exc()
             return JsonResponse(
                 {"message": "Get user information Unsuccessfully"},
                 status=HTTP_400_BAD_REQUEST,
@@ -1071,6 +1067,7 @@ def signInGoogle(request):
 def signUp(request):
     if request.method == "POST":
         try:
+            print("REQUEST DATA: ", request.data)
             email = request.data.get("email")
             username = request.data.get("username", None)
             password = request.data.get("password")
@@ -1096,7 +1093,7 @@ def signUp(request):
             pwd_sha256 = encodeToSha256(password)
             with transaction.atomic():
                 newUser = Users.objects.create(
-                    username=username if username else email.split("@")[0],
+                    user_name=username if username else email.split("@")[0],
                     email=email,
                     pwd_sha256=pwd_sha256,
                     role="User",
